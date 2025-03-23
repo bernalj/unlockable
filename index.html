@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <title>Unlockable</title>
+  <style>
+    :root {
+      /* Default firework potency (1 = 100% potency) */
+      --firework-potency: 1;
+    }
+    /* Reset and basic styling */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      background: #222;
+      color: #fff;
+      overflow: hidden;
+    }
+    /* Main Menu Overlay */
+    #mainMenu {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.9);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 30;
+    }
+    .main-menu-content {
+      text-align: center;
+    }
+    .main-menu-content h2 {
+      margin-bottom: 20px;
+      font-size: 32px;
+    }
+    .main-menu-content button {
+      margin: 10px;
+      padding: 10px 20px;
+      font-size: 18px;
+      border: none;
+      background: #FFD700;
+      color: #222;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+    /* Header with score and pause button (Lives removed) */
+    #header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 50px;
+      background: #333;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 10px;
+      z-index: 10;
+    }
+    #score, #pauseBtn {
+      font-size: 18px;
+      cursor: pointer;
+      position: relative;
+    }
+    #pauseBtn {
+      user-select: none;
+    }
+    /* Target pattern visual display as a 3x3 grid */
+    #targetPattern {
+      position: fixed;
+      top: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100px;
+      height: 100px;
+      z-index: 20;
+      transform-origin: center center;
+    }
+    .target-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-gap: 5px;
+      width: 100%;
+      height: 100%;
+    }
+    /* Each target circle now has a transition on filter and transform */
+    .target-circle {
+      border: 2px solid #fff;
+      border-radius: 50%;
+      background: #333;
+      transition: filter 0.3s, transform 0.3s;
+    }
+    .target-circle.active {
+      background: #FFD700;
+    }
+    /* Explosion animation for target pattern */
+    #targetPattern.explode {
+      animation: dissolveExplosion 0.2s forwards;
+    }
+    @keyframes dissolveExplosion {
+      0% {
+        opacity: 1;
+        transform: translateX(-50%) scale(1);
+      }
+      100% {
+        opacity: 0;
+        transform: translateX(-50%) scale(calc(1 + var(--firework-potency) * 0.5));
+      }
+    }
+    /* Timer display */
+    #timer {
+      position: fixed;
+      top: 60px;
+      right: 10px;
+      font-size: 20px;
+      padding: 5px 10px;
+      background: #444;
+      border-radius: 5px;
+      z-index: 10;
+      overflow: hidden;
+    }
+    /* Timer increment animation */
+    .timer-increment {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translate(-50%, 0);
+      font-size: 16px;
+      color: #0f0;
+      opacity: 1;
+      pointer-events: none;
+      animation: slideDownFade 0.5s forwards;
+    }
+    @keyframes slideDownFade {
+      0% { transform: translate(-50%, 0); opacity: 1; }
+      100% { transform: translate(-50%, 20px); opacity: 0; }
+    }
+    /* Timer decrement animation in red */
+    .timer-decrement {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translate(-50%, 0);
+      font-size: 16px;
+      color: red;
+      opacity: 1;
+      pointer-events: none;
+      animation: slideDownFade 0.5s forwards;
+    }
+    /* Countdown overlay for final seconds */
+    #countdownOverlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 15;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      pointer-events: none;
+    }
+    .countdown-number {
+      font-size: 100px;
+      color: rgba(255, 0, 0, 0.7);
+      animation: zoomFade 1s forwards;
+    }
+    @keyframes zoomFade {
+      0% { transform: scale(1); opacity: 1; }
+      100% { transform: scale(3); opacity: 0; }
+    }
+    /* Background flash red animation */
+    @keyframes bgFlash {
+      0% { background-color: #222; }
+      50% { background-color: #331111; }
+      100% { background-color: #222; }
+    }
+    .flash-red {
+      animation: bgFlash 0.3s forwards;
+    }
+    /* Game area */
+    #gameArea {
+      position: absolute;
+      top: 100px;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      padding-bottom: 10vh;
+      overflow: hidden;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 80px);
+      grid-template-rows: repeat(3, 80px);
+      gap: 30px;
+      position: relative;
+      z-index: 2;
+    }
+    .circle {
+      width: 80px;
+      height: 80px;
+      border: 4px solid #FFD700;
+      border-radius: 50%;
+      background: #555;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.2s, transform 0.2s;
+      font-size: 0;
+    }
+    .circle.active {
+      background: #FFD700;
+      transform: scale(1.1);
+    }
+    /* Canvas for drawing lines */
+    #lineCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
+      pointer-events: none;
+    }
+    /* Overlays for tutorial, settings, pause, and game over */
+    .overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.8);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 20;
+    }
+    .overlay .content, .tutorial-content, .settings-content, .pause-content, .game-over-content {
+      background: #444;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+      max-width: 80%;
+    }
+    .overlay button {
+      margin-top: 15px;
+      padding: 10px 20px;
+      font-size: 16px;
+      border: none;
+      background: #FFD700;
+      color: #222;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+    /* Leaderboard and Achievements */
+    #leaderboard, #achievements {
+      position: fixed;
+      bottom: 10px;
+      left: 10px;
+      background: #444;
+      padding: 10px;
+      border-radius: 5px;
+      font-size: 14px;
+      z-index: 10;
+    }
+    #achievements {
+      left: auto;
+      right: 10px;
+    }
+    #leaderboard h2, #achievements h2 {
+      font-size: 16px;
+      margin-bottom: 5px;
+    }
+    #leaderboard ul, #achievements ul {
+      list-style: none;
+    }
+    /* Game Over Overlay */
+    #gameOverOverlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 25;
+      display: none;
+      justify-content: center;
+      align-items: center;
+    }
+  </style>
+</head>
+<body>
+  <!-- Main Menu Overlay -->
+  <div id="mainMenu" class="overlay" style="display: flex;">
+    <div class="main-menu-content content">
+      <h2>Unlockable</h2>
+      <button id="playBtn">Play</button>
+      <button id="instructionsBtn">Instructions</button>
+    </div>
+  </div>
+  <!-- Header (Lives removed) -->
+  <div id="header">
+    <div id="score">Score: <span id="scoreCount">0</span></div>
+    <div id="pauseBtn">Pause</div>
+  </div>
+  <!-- Target pattern visual display -->
+  <div id="targetPattern">
+    <div class="target-grid">
+      <div class="target-circle" data-index="1"></div>
+      <div class="target-circle" data-index="2"></div>
+      <div class="target-circle" data-index="3"></div>
+      <div class="target-circle" data-index="4"></div>
+      <div class="target-circle" data-index="5"></div>
+      <div class="target-circle" data-index="6"></div>
+      <div class="target-circle" data-index="7"></div>
+      <div class="target-circle" data-index="8"></div>
+      <div class="target-circle" data-index="9"></div>
+    </div>
+  </div>
+  <!-- Timer display -->
+  <div id="timer">
+    Time: <span id="timerCount">25</span>
+  </div>
+  <!-- Countdown overlay for final seconds -->
+  <div id="countdownOverlay">
+    <div class="countdown-number" id="countdownNumber"></div>
+  </div>
+  <!-- Game Area -->
+  <div id="gameArea">
+    <canvas id="lineCanvas"></canvas>
+    <div class="grid">
+      <div class="circle" data-index="1"></div>
+      <div class="circle" data-index="2"></div>
+      <div class="circle" data-index="3"></div>
+      <div class="circle" data-index="4"></div>
+      <div class="circle" data-index="5"></div>
+      <div class="circle" data-index="6"></div>
+      <div class="circle" data-index="7"></div>
+      <div class="circle" data-index="8"></div>
+      <div class="circle" data-index="9"></div>
+    </div>
+  </div>
+  <!-- Tutorial/Onboarding Screen -->
+  <div id="tutorial" class="overlay">
+    <div class="tutorial-content content">
+      <h2>Instructions</h2>
+      <p>
+        Connect the circles in the pattern shown at the top.
+        If you drag between two circles with an intermediate circle in between, that circle will be auto-activated.
+        A correct pattern gives you points and adds 0.5 seconds to the timer.
+        If the input is wrong, 0.5 seconds are subtracted and the background flashes dark red.
+      </p>
+      <button id="closeTutorial">Got it!</button>
+    </div>
+  </div>
+  <!-- Settings Menu -->
+  <div id="settings" class="overlay">
+    <div class="settings-content content">
+      <h2>Settings</h2>
+      <label>
+        <input type="checkbox" id="soundToggle" checked> Sound
+      </label>
+      <br><br>
+      <label>
+        Volume:
+        <input type="range" id="volumeControl" min="0" max="1" step="0.1" value="1">
+      </label>
+      <br><br>
+      <label>
+        <input type="checkbox" id="exactMatchToggle" checked> Exact Match Mode
+      </label>
+      <br><br>
+      <button id="closeSettings">Close</button>
+    </div>
+  </div>
+  <!-- Game Over Overlay -->
+  <div id="gameOverOverlay" class="overlay">
+    <div class="game-over-content content">
+      <h2>Game Over</h2>
+      <p id="finalScore"></p>
+      <p id="finalHighScore"></p>
+      <button id="retryBtn">Retry</button>
+    </div>
+  </div>
+  <!-- Pause Overlay -->
+  <div id="pauseOverlay" class="overlay">
+    <div class="pause-content content">
+      <h2>Game Paused</h2>
+      <button id="resumeBtn">Resume</button>
+      <button id="retryPauseBtn">Retry</button>
+    </div>
+  </div>
+  <!-- Leaderboard -->
+  <div id="leaderboard">
+    <h2>Leaderboard</h2>
+    <ul id="leaderboardList"></ul>
+  </div>
+  <!-- Achievements -->
+  <div id="achievements">
+    <h2>Achievements</h2>
+    <ul id="achievementsList"></ul>
+  </div>
+  <script>
+    // Global variables and game settings
+    let score = 0;
+    let drawnPattern = [];
+    let exact_match = true; // can be toggled via settings
+
+    // Pattern list as provided
+    let patterns = [
+      [1,2,3],
+      [3,2,1],
+      [4,5,6],
+      [6,5,4],
+      [7,8,9],
+      [9,8,7],
+      [1,4,7],
+      [7,4,1],
+      [2,5,8],
+      [8,5,2],
+      [3,6,9],
+      [9,6,3],
+      [1,5,9],
+      [9,5,1],
+      [3,5,7],
+      [1,2,3,6],
+      [3,2,1,4],
+      [7,8,9,6],
+      [9,8,7,4],
+      [1,4,7,8],
+      [7,4,1,2],
+      [1,5,9,8],
+      [3,5,7,8],
+      [2,5,8,9],
+      [1,2,3],
+      [3,2,1],
+      [4,5,6],
+      [6,5,4],
+      [7,8,9],
+      [9,8,7],
+      [1,4,7],
+      [7,4,1],
+      [2,5,8],
+      [8,5,2],
+      [3,6,9],
+      [9,6,3],
+      [1,5,9],
+      [9,5,1],
+      [3,5,7],
+      [1,2,3,6],
+      [3,2,1,4],
+      [7,8,9,6],
+      [9,8,7,4],
+      [1,4,7,8],
+      [7,4,1,2],
+      [1,5,9,8],
+      [3,5,7,8],
+      [2,5,8,9],
+      [1,2,3,6,9],
+      [3,2,1,4,7],
+      [1,4,7,8,9],
+      [1,8,3,4,9],
+      [2,7,4,9,5,1],
+      [3,8,1,6,7]
+    ];
+    let currentTarget = [];
+    
+    // Set timer duration to 25 seconds
+    const timerDuration = 25;
+    let timerInterval = null;
+    let remainingTime = timerDuration;
+    
+    // Audio settings – using files from audio/ folder
+    let soundEnabled = true;
+    let volume = 1;
+    let tapSound = new Audio("audio/tap.wav");
+    let correctSound = new Audio("audio/correct.wav");
+    let incorrectSound = new Audio("audio/incorrect.wav");
+    
+    // Helper function to play a sound by type using cloning for overlapping playback
+    function playSound(type) {
+      let sound;
+      if (type === "tap") {
+        sound = tapSound.cloneNode();
+      } else if (type === "correct") {
+        sound = correctSound.cloneNode();
+      } else if (type === "incorrect") {
+        sound = incorrectSound.cloneNode();
+      } else {
+        return;
+      }
+      sound.volume = volume;
+      sound.play();
+    }
+    
+    // New helper to animate time subtraction in red.
+    function animateTimerDecrement() {
+      const timerElem = document.getElementById("timer");
+      const decElem = document.createElement("span");
+      decElem.className = "timer-decrement";
+      decElem.textContent = "-0.5";
+      timerElem.appendChild(decElem);
+      setTimeout(() => { timerElem.removeChild(decElem); }, 500);
+    }
+    
+    // Background flash: flash the body in dark red.
+    function flashBackground() {
+      document.body.classList.add("flash-red");
+      setTimeout(() => { document.body.classList.remove("flash-red"); }, 300);
+    }
+    
+    // Explosion potency (relative to 40px radius)
+    const FIREWORK_POTENCY = 1;
+    
+    // Helper: Get intermediate node if exactly in line.
+    function getIntermediate(last, candidate) {
+      let lastRow = Math.floor((last - 1) / 3);
+      let lastCol = (last - 1) % 3;
+      let candRow = Math.floor((candidate - 1) / 3);
+      let candCol = (candidate - 1) % 3;
+      if ((lastRow + candRow) % 2 === 0 && (lastCol + candCol) % 2 === 0) {
+        let midRow = (lastRow + candRow) / 2;
+        let midCol = (lastCol + candCol) / 2;
+        let midIndex = midRow * 3 + midCol + 1;
+        if (midIndex !== last && midIndex !== candidate) {
+          return midIndex;
+        }
+      }
+      return null;
+    }
+    
+    // Update UI: score and target pattern display.
+    function updateUI() {
+      document.getElementById('scoreCount').textContent = score;
+      updateTargetDisplay();
+    }
+    
+    // Update the target pattern display.
+    function updateTargetDisplay() {
+      const circles = document.querySelectorAll('#targetPattern .target-circle');
+      circles.forEach(circle => {
+        circle.classList.remove('active');
+        circle.style.filter = '';
+        circle.style.transform = 'scale(1)';
+      });
+      currentTarget.forEach((val, idx) => {
+        let circle = document.querySelector(`#targetPattern .target-circle[data-index="${val}"]`);
+        if (circle) {
+          circle.classList.add('active');
+          let brightness = (currentTarget.length > 1) ? 1 - (idx * (0.7 / (currentTarget.length - 1))) : 1;
+          let scale = (currentTarget.length > 1) ? 1 - (idx * (0.4 / (currentTarget.length - 1))) : 1;
+          let maxHue = 120;
+          let hue = (currentTarget.length > 1) ? (idx / (currentTarget.length - 1) * maxHue) : 0;
+          circle.style.filter = `brightness(${brightness}) hue-rotate(${hue}deg)`;
+          circle.style.transform = `scale(${scale})`;
+        }
+      });
+    }
+    
+    // Generate new target pattern.
+    function generateTarget() {
+      currentTarget = patterns[Math.floor(Math.random() * patterns.length)];
+      updateUI();
+      resetDrawing();
+    }
+    
+    // Reset drawn pattern and clear states.
+    function resetDrawing() {
+      drawnPattern = [];
+      clearCanvas();
+      document.querySelectorAll('.circle').forEach(circle => {
+        circle.classList.remove('active');
+      });
+    }
+    
+    // Canvas for drawing lines.
+    const canvas = document.getElementById("lineCanvas");
+    const ctx = canvas.getContext("2d");
+    function resizeCanvas() {
+      canvas.width = document.getElementById("gameArea").offsetWidth;
+      canvas.height = document.getElementById("gameArea").offsetHeight;
+    }
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
+    
+    // Get center coordinates of a circle element.
+    function getCircleCenter(circle) {
+      const rect = circle.getBoundingClientRect();
+      const canvasRect = canvas.getBoundingClientRect();
+      return {
+        x: rect.left + rect.width / 2 - canvasRect.left,
+        y: rect.top + rect.height / 2 - canvasRect.top
+      };
+    }
+    
+    // Clear canvas.
+    function clearCanvas() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+    
+    // Draw connecting lines.
+    let currentPointer = null;
+    function drawLines() {
+      clearCanvas();
+      if (drawnPattern.length === 0) return;
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = "#FFD700";
+      ctx.beginPath();
+      for (let i = 0; i < drawnPattern.length; i++) {
+        const circle = document.querySelector(`.circle[data-index="${drawnPattern[i]}"]`);
+        const center = getCircleCenter(circle);
+        if (i === 0) {
+          ctx.moveTo(center.x, center.y);
+        } else {
+          ctx.lineTo(center.x, center.y);
+        }
+      }
+      if (currentPointer) {
+        ctx.lineTo(currentPointer.x, currentPointer.y);
+      }
+      ctx.stroke();
+    }
+    
+    // Check if drawnPattern contains target pattern (subsequence).
+    function checkPattern() {
+      let target = currentTarget;
+      let drawn = drawnPattern;
+      let j = 0;
+      for (let i = 0; i < drawn.length && j < target.length; i++) {
+        if (drawn[i] === target[j]) { j++; }
+      }
+      return j === target.length;
+    }
+    
+    // Check for an exact match.
+    function checkExact() {
+      if (drawnPattern.length !== currentTarget.length) return false;
+      for (let i = 0; i < currentTarget.length; i++) {
+        if (drawnPattern[i] !== currentTarget[i]) return false;
+      }
+      return true;
+    }
+    
+    // When input is complete, check pattern validity.
+    function completePattern() {
+      let isValid;
+      if (exact_match) {
+        isValid = checkExact();
+      } else {
+        isValid = checkPattern();
+      }
+      if (isValid) {
+        score += (exact_match ? 100 : 80);
+        if (soundEnabled) { 
+          playSound("correct");
+        }
+        remainingTime += 0.5;
+        updateTimerDisplay();
+        animateTimerIncrement();
+        animateSuccess();
+      } else {
+        remainingTime -= 0.5;
+        if (soundEnabled) { 
+          playSound("incorrect");
+        }
+        animateTimerDecrement();
+        flashBackground();
+        updateTimerDisplay();
+        resetDrawing();
+      }
+    }
+    
+    // Animate target explosion and generate new target.
+    function animateSuccess() {
+      const targetElement = document.getElementById("targetPattern");
+      targetElement.style.setProperty('--firework-potency', FIREWORK_POTENCY);
+      targetElement.classList.add("explode");
+      targetElement.addEventListener("animationend", function handler() {
+        targetElement.classList.remove("explode");
+        targetElement.removeEventListener("animationend", handler);
+        generateTarget();
+      });
+      resetDrawing();
+    }
+    
+    // Update timer display.
+    function updateTimerDisplay() {
+      document.getElementById("timerCount").textContent = Math.floor(remainingTime);
+      if (remainingTime <= 5 && remainingTime > 0) {
+        showCountdown(Math.floor(remainingTime));
+      } else {
+        document.getElementById("countdownOverlay").style.display = "none";
+      }
+    }
+    
+    // Animate the +0.5 timer increment.
+    function animateTimerIncrement() {
+      const timerElem = document.getElementById("timer");
+      const incElem = document.createElement("span");
+      incElem.className = "timer-increment";
+      incElem.textContent = "+0.5";
+      timerElem.appendChild(incElem);
+      setTimeout(() => { timerElem.removeChild(incElem); }, 500);
+    }
+    
+    // Animate the -0.5 timer decrement.
+    function animateTimerDecrement() {
+      const timerElem = document.getElementById("timer");
+      const decElem = document.createElement("span");
+      decElem.className = "timer-decrement";
+      decElem.textContent = "-0.5";
+      timerElem.appendChild(decElem);
+      setTimeout(() => { timerElem.removeChild(decElem); }, 500);
+    }
+    
+    // Flash the background in dark red.
+    function flashBackground() {
+      document.body.classList.add("flash-red");
+      setTimeout(() => { document.body.classList.remove("flash-red"); }, 300);
+    }
+    
+    // Countdown overlay: show large countdown numbers.
+    function showCountdown(num) {
+      const overlay = document.getElementById("countdownOverlay");
+      const numberElem = document.getElementById("countdownNumber");
+      numberElem.textContent = num;
+      numberElem.style.animation = 'none';
+      numberElem.offsetHeight;
+      numberElem.style.animation = 'zoomFade 1s forwards';
+      overlay.style.display = "flex";
+    }
+    
+    // Hitbox settings for circles
+    const CIRCLE_DIAMETER = 80;
+    const CIRCLE_RADIUS = CIRCLE_DIAMETER / 2;
+    const HIT_PERCENTAGE = 0.7;
+    const HIT_THRESHOLD = CIRCLE_RADIUS * HIT_PERCENTAGE;
+    
+    // Timer function with optional reset parameter.
+    function startTimer(reset = true) {
+      if (reset) { remainingTime = timerDuration; }
+      updateTimerDisplay();
+      timerInterval = setInterval(() => {
+        remainingTime--;
+        updateTimerDisplay();
+        if (remainingTime <= 0) {
+          clearInterval(timerInterval);
+          gameOver();
+        }
+      }, 1000);
+    }
+    
+    // Game Over: show game over overlay.
+    function gameOver() {
+      clearInterval(timerInterval);
+      document.getElementById("finalScore").textContent = "Score: " + score;
+      let highScore = localStorage.getItem("highScore") || 0;
+      if (score > highScore) { 
+        localStorage.setItem("highScore", score);
+        highScore = score;
+      }
+      document.getElementById("finalHighScore").textContent = "High Score: " + highScore;
+      document.getElementById("gameOverOverlay").style.display = "flex";
+      resetDrawing();
+    }
+    
+    // Input handling (mouse and touch)
+    let isDrawing = false;
+    const gameArea = document.getElementById("gameArea");
+    
+    function handleStart(e) {
+      e.preventDefault();
+      isDrawing = true;
+      currentPointer = null;
+      let target = e.target;
+      if (target.classList.contains("circle")) {
+        const index = parseInt(target.getAttribute("data-index"));
+        if (!drawnPattern.includes(index)) {
+          drawnPattern.push(index);
+          target.classList.add("active");
+          if (soundEnabled) {
+            playSound("tap");
+          }
+        }
+      }
+    }
+    
+    function handleMove(e) {
+      if (!isDrawing) return;
+      let clientX, clientY;
+      if (e.touches) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+      } else {
+        clientX = e.clientX;
+        clientY = e.clientY;
+      }
+      const canvasRect = canvas.getBoundingClientRect();
+      currentPointer = { x: clientX - canvasRect.left, y: clientY - canvasRect.top };
+      
+      const circles = document.querySelectorAll('.circle');
+      for (let i = 0; i < circles.length; i++) {
+        let circle = circles[i];
+        let index = parseInt(circle.getAttribute("data-index"));
+        if (drawnPattern.includes(index)) continue;
+        const rect = circle.getBoundingClientRect();
+        if (drawnPattern.length === 0) {
+          if (clientX >= rect.left && clientX <= rect.right &&
+              clientY >= rect.top && clientY <= rect.bottom) {
+            drawnPattern.push(index);
+            circle.classList.add("active");
+            if (soundEnabled) {
+              playSound("tap");
+            }
+          }
+        } else {
+          const centerX = rect.left + rect.width / 2;
+          const centerY = rect.top + rect.height / 2;
+          const dx = clientX - centerX;
+          const dy = clientY - centerY;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          if (distance <= HIT_THRESHOLD) {
+            let last = drawnPattern[drawnPattern.length - 1];
+            let intermediate = getIntermediate(last, index);
+            if (intermediate && !drawnPattern.includes(intermediate)) {
+              let autoCircle = document.querySelector(`.circle[data-index="${intermediate}"]`);
+              drawnPattern.push(intermediate);
+              if (autoCircle) {
+                autoCircle.classList.add("active");
+                if (soundEnabled) {
+                  setTimeout(() => { playSound("tap"); }, 100);
+                }
+              }
+            }
+            drawnPattern.push(index);
+            circle.classList.add("active");
+            if (soundEnabled) {
+              playSound("tap");
+            }
+          }
+        }
+      }
+      drawLines();
+    }
+    
+    function handleEnd(e) {
+      if (!isDrawing) return;
+      isDrawing = false;
+      currentPointer = null;
+      drawLines();
+      // Only check the pattern if something was drawn
+      if (drawnPattern.length > 0) {
+        completePattern();
+      }
+    }
+    
+    gameArea.addEventListener("mousedown", handleStart);
+    gameArea.addEventListener("mousemove", handleMove);
+    gameArea.addEventListener("mouseup", handleEnd);
+    gameArea.addEventListener("mouseleave", handleEnd);
+    gameArea.addEventListener("touchstart", handleStart);
+    gameArea.addEventListener("touchmove", handleMove);
+    gameArea.addEventListener("touchend", handleEnd);
+    
+    // Pause functionality
+    const pauseBtn = document.getElementById("pauseBtn");
+    const pauseOverlay = document.getElementById("pauseOverlay");
+    pauseBtn.addEventListener("click", pauseGame);
+    document.getElementById("resumeBtn").addEventListener("click", resumeGame);
+    
+    function pauseGame() {
+      clearInterval(timerInterval);
+      pauseOverlay.style.display = "flex";
+    }
+    
+    function resumeGame() {
+      pauseOverlay.style.display = "none";
+      startTimer(false);
+    }
+    
+    // Tutorial/Onboarding: instructions overlay.
+    const tutorial = document.getElementById("tutorial");
+    const closeTutorial = document.getElementById("closeTutorial");
+    closeTutorial.addEventListener("click", () => {
+      tutorial.style.display = "none";
+      document.getElementById("mainMenu").style.display = "flex";
+    });
+    
+    // Main Menu: Play and Instructions buttons.
+    document.getElementById("playBtn").addEventListener("click", () => {
+      document.getElementById("mainMenu").style.display = "none";
+      generateTarget();
+      startTimer(true);
+    });
+    document.getElementById("instructionsBtn").addEventListener("click", () => {
+      document.getElementById("mainMenu").style.display = "none";
+      tutorial.style.display = "flex";
+    });
+    
+    // Game Over overlay retry functionality.
+    document.getElementById("retryBtn").addEventListener("click", () => {
+      document.getElementById("gameOverOverlay").style.display = "none";
+      restartGame();
+    });
+    
+    // Pause overlay retry functionality.
+    document.getElementById("retryPauseBtn").addEventListener("click", () => {
+      pauseOverlay.style.display = "none";
+      restartGame();
+    });
+
+    // Restart game without refreshing.
+    function restartGame() {
+      score = 0;
+      remainingTime = timerDuration;
+      updateTimerDisplay();
+      updateUI();
+      generateTarget();
+      startTimer(true);
+    }
+    
+    // Achievements (simple example)
+    function updateAchievements() {
+      const achievementsList = document.getElementById("achievementsList");
+      achievementsList.innerHTML = "";
+      if (score >= 500) {
+        let li = document.createElement("li");
+        li.textContent = "Score 500+ Achieved!";
+        achievementsList.appendChild(li);
+      }
+    }
+    
+    updateLeaderboard();
+    setInterval(updateAchievements, 5000);
+    
+    function updateLeaderboard() {
+      let highScore = localStorage.getItem("highScore") || 0;
+      const leaderboardList = document.getElementById("leaderboardList");
+      leaderboardList.innerHTML = "";
+      let li = document.createElement("li");
+      li.textContent = "High Score: " + highScore;
+      leaderboardList.appendChild(li);
+    }
+  </script>
+</body>
+</html>
