@@ -51,7 +51,7 @@
       cursor: pointer;
       border-radius: 5px;
     }
-    /* Header with score and pause button (Lives removed) */
+    /* Header with score and pause button */
     #header {
       position: fixed;
       top: 0;
@@ -207,19 +207,35 @@
       position: relative;
       z-index: 2;
     }
+    /* Updated design for game circles */
     .circle {
       width: 80px;
       height: 80px;
-      border: 4px solid #FFD700;
+      /* border: 4px solid #FFD700; */
       border-radius: 50%;
-      background: #555;
+      /* Glass effect: using a subtle gradient and inner shadow */
+      background: linear-gradient(#8e8e8e, #444 40%, #444 3%, #282828);
+      box-shadow: inset 0 0 8px rgba(255,255,255,0.6), inset 0 0 5px rgba(0,0,0,0.3);
       cursor: pointer;
       user-select: none;
       transition: background 0.2s, transform 0.2s;
       font-size: 0;
+      position: relative;
+    }
+    /* Dot in the middle of the circle */
+    .circle::after {
+      content: "";
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      background: #fff;
+      border-radius: 50%;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
     }
     .circle.active {
-      background: #FFD700;
+      background: linear-gradient(#F57F17, #FDD835 3%, #FDD835 40%, #FFF176);
       transform: scale(1.1);
     }
     /* Canvas for drawing lines */
@@ -305,7 +321,7 @@
       <button id="instructionsBtn">Instructions</button>
     </div>
   </div>
-  <!-- Header (Lives removed) -->
+  <!-- Header with score and pause button -->
   <div id="header">
     <div id="score">Score: <span id="scoreCount">0</span></div>
     <div id="pauseBtn">Pause</div>
@@ -353,9 +369,9 @@
       <h2>Instructions</h2>
       <p>
         Connect the circles in the pattern shown at the top.
-        <br>Correct patterns will reward you with additional time.
-        <br>Mistakes will cost you time.
-        <br><strong>Have fun!</strong>
+        If you drag between two circles with an intermediate circle in between, that circle will be auto-activated.
+        A correct pattern gives you points and adds 0.5 seconds to the timer.
+        If the input is wrong, 0.5 seconds are subtracted and the background flashes dark red.
       </p>
       <button id="closeTutorial">Got it!</button>
     </div>
@@ -389,7 +405,7 @@
       <button id="retryBtn">Retry</button>
     </div>
   </div>
-  <!-- Pause Overlay -->
+  <!-- Pause Overlay with Retry option -->
   <div id="pauseOverlay" class="overlay">
     <div class="pause-content content">
       <h2>Game Paused</h2>
@@ -855,7 +871,7 @@
       isDrawing = false;
       currentPointer = null;
       drawLines();
-      // Only check the pattern if something was drawn
+      // Only check pattern if the user drew something
       if (drawnPattern.length > 0) {
         completePattern();
       }
@@ -874,6 +890,11 @@
     const pauseOverlay = document.getElementById("pauseOverlay");
     pauseBtn.addEventListener("click", pauseGame);
     document.getElementById("resumeBtn").addEventListener("click", resumeGame);
+    // New event listener for retry from pause menu
+    document.getElementById("retryPauseBtn").addEventListener("click", () => {
+      pauseOverlay.style.display = "none";
+      restartGame();
+    });
     
     function pauseGame() {
       clearInterval(timerInterval);
@@ -910,12 +931,6 @@
       restartGame();
     });
     
-    // Pause overlay retry functionality.
-    document.getElementById("retryPauseBtn").addEventListener("click", () => {
-      pauseOverlay.style.display = "none";
-      restartGame();
-    });
-
     // Restart game without refreshing.
     function restartGame() {
       score = 0;
