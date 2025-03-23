@@ -211,7 +211,6 @@
     .circle {
       width: 80px;
       height: 80px;
-      /* Glass effect: using your specified gray gradient */
       border-radius: 50%;
       background: linear-gradient(#8e8e8e, #444 40%, #444 3%, #282828);
       box-shadow: inset 0 0 8px rgba(255,255,255,0.6), inset 0 0 5px rgba(0,0,0,0.3);
@@ -227,8 +226,9 @@
       position: absolute;
       width: 12px;
       height: 12px;
-      background: #fff;
+      /* Ensure dot is circular */
       border-radius: 50%;
+      background: #fff;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
@@ -246,7 +246,7 @@
       z-index: 1;
       pointer-events: none;
     }
-    /* Overlays for tutorial, settings, pause, and game over */
+    /* Overlays for tutorial, settings, pause, game over, and high scores */
     .overlay {
       position: fixed;
       top: 0;
@@ -259,7 +259,7 @@
       align-items: center;
       z-index: 20;
     }
-    .overlay .content, .tutorial-content, .settings-content, .pause-content, .game-over-content {
+    .overlay .content, .tutorial-content, .settings-content, .pause-content, .game-over-content, .highscore-content {
       background: #444;
       padding: 20px;
       border-radius: 10px;
@@ -310,6 +310,35 @@
       justify-content: center;
       align-items: center;
     }
+    /* Highscore Overlay */
+    #highscoreOverlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 35;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      background: rgba(0,0,0,0.85);
+    }
+    #highscoreOverlay .highscore-content {
+      max-width: 400px;
+      width: 90%;
+    }
+    #highscoreList {
+      text-align: left;
+      margin-top: 10px;
+    }
+    #highscoreList li {
+      margin: 5px 0;
+    }
+    #highscoreOverlay input[type="text"] {
+      width: 80%;
+      padding: 5px;
+      font-size: 16px;
+    }
   </style>
 </head>
 <body>
@@ -319,6 +348,8 @@
       <h2>Unlockable</h2>
       <button id="playBtn">Play</button>
       <button id="instructionsBtn">Instructions</button>
+      <!-- Button to view high scores from main menu -->
+      <button id="viewHighscoresBtnMain">High Scores</button>
     </div>
   </div>
   <!-- Header with score and pause button -->
@@ -369,9 +400,9 @@
       <h2>Instructions</h2>
       <p>
         Connect the circles in the pattern shown at the top.
-        <br>Correct patterns will reward you with additional time.
-        <br>Mistakes will cost you time.
-        <br><strong>Have fun!</strong>
+        If you drag between two circles with an intermediate circle in between, that circle will be auto-activated.
+        A correct pattern gives you points and adds 0.5 seconds to the timer.
+        If the input is wrong, 0.5 seconds are subtracted and the background flashes dark red.
       </p>
       <button id="closeTutorial">Got it!</button>
     </div>
@@ -402,15 +433,28 @@
       <h2>Game Over</h2>
       <p id="finalScore"></p>
       <p id="finalHighScore"></p>
+      <!-- Input for submitting high score -->
+      <input type="text" id="playerName" placeholder="Enter your name">
+      <button id="submitHighscoreBtn">Submit Score</button>
       <button id="retryBtn">Retry</button>
     </div>
   </div>
-  <!-- Pause Overlay with Retry option -->
+  <!-- Pause Overlay with Retry option and View High Scores button -->
   <div id="pauseOverlay" class="overlay">
     <div class="pause-content content">
       <h2>Game Paused</h2>
       <button id="resumeBtn">Resume</button>
       <button id="retryPauseBtn">Retry</button>
+      <!-- New button to view high scores in Pause menu -->
+      <button id="viewHighscoresBtnPauseOverlay">View High Scores</button>
+    </div>
+  </div>
+  <!-- Highscore Overlay -->
+  <div id="highscoreOverlay" class="overlay">
+    <div class="highscore-content content">
+      <h2>High Scores</h2>
+      <ul id="highscoreList"></ul>
+      <button id="closeHighscoreBtn">Close</button>
     </div>
   </div>
   <!-- Leaderboard -->
@@ -423,7 +467,10 @@
     <h2>Achievements</h2>
     <ul id="achievementsList"></ul>
   </div>
-  <script>
+  <script type="module">
+    // Import Firebase helpers from external file.
+    import { submitHighScore, getTopHighScores } from './firebase-config.js';
+
     // Global variables and game settings
     let score = 0;
     let drawnPattern = [];
@@ -500,9 +547,9 @@
     let correctSound = new Audio("audio/correct.wav");
     let incorrectSound = new Audio("audio/incorrect.wav");
     
-    // Variables for dynamic hit percentages
+    // New variables for dynamic hit percentages
     const ACTIVE_HIT_PERCENTAGE = 1;
-    const INACTIVE_HIT_PERCENTAGE = 0.5;
+    const INACTIVE_HIT_PERCENTAGE = 0.6;
     
     // Helper function to play a sound by type using cloning for overlapping playback
     function playSound(type) {
@@ -520,7 +567,7 @@
       sound.play();
     }
     
-    // New helper to animate time subtraction in red.
+    // Helper to animate time subtraction in red.
     function animateTimerDecrement() {
       const timerElem = document.getElementById("timer");
       const decElem = document.createElement("span");
@@ -530,7 +577,7 @@
       setTimeout(() => { timerElem.removeChild(decElem); }, 500);
     }
     
-    // Background flash: flash the body in dark red.
+    // Helper function to flash the background in dark red.
     function flashBackground() {
       document.body.classList.add("flash-red");
       setTimeout(() => { document.body.classList.remove("flash-red"); }, 300);
@@ -730,21 +777,7 @@
       setTimeout(() => { timerElem.removeChild(incElem); }, 500);
     }
     
-    // Animate the -0.5 timer decrement.
-    function animateTimerDecrement() {
-      const timerElem = document.getElementById("timer");
-      const decElem = document.createElement("span");
-      decElem.className = "timer-decrement";
-      decElem.textContent = "-0.5";
-      timerElem.appendChild(decElem);
-      setTimeout(() => { timerElem.removeChild(decElem); }, 500);
-    }
-    
-    // Flash the background in dark red.
-    function flashBackground() {
-      document.body.classList.add("flash-red");
-      setTimeout(() => { document.body.classList.remove("flash-red"); }, 300);
-    }
+    // (animateTimerDecrement and flashBackground are declared above, only once)
     
     // Countdown overlay: show large countdown numbers.
     function showCountdown(num) {
@@ -898,10 +931,13 @@
     const pauseOverlay = document.getElementById("pauseOverlay");
     pauseBtn.addEventListener("click", pauseGame);
     document.getElementById("resumeBtn").addEventListener("click", resumeGame);
-    // New event listener for retry from pause menu
     document.getElementById("retryPauseBtn").addEventListener("click", () => {
       pauseOverlay.style.display = "none";
       restartGame();
+    });
+    // New button in Pause overlay to view high scores
+    document.getElementById("viewHighscoresBtnPauseOverlay").addEventListener("click", () => {
+      openHighscoreOverlay();
     });
     
     function pauseGame() {
@@ -933,13 +969,36 @@
       tutorial.style.display = "flex";
     });
     
-    // Game Over overlay retry functionality.
+    // Open highscore overlay from main menu button
+    document.getElementById("viewHighscoresBtnMain").addEventListener("click", () => {
+      openHighscoreOverlay();
+    });
+    
+    document.getElementById("closeHighscoreBtn").addEventListener("click", () => {
+      document.getElementById("highscoreOverlay").style.display = "none";
+    });
+    
+    // Game Over highscore submission and display
+    document.getElementById("submitHighscoreBtn").addEventListener("click", () => {
+      const playerName = document.getElementById("playerName").value.trim();
+      if (playerName === "") {
+        alert("Please enter your name.");
+        return;
+      }
+      submitHighScore(playerName, score)
+        .then(() => {
+          openHighscoreOverlay();
+        })
+        .catch((error) => {
+          console.error("Error submitting highscore:", error);
+        });
+    });
+    
     document.getElementById("retryBtn").addEventListener("click", () => {
       document.getElementById("gameOverOverlay").style.display = "none";
       restartGame();
     });
     
-    // Restart game without refreshing.
     function restartGame() {
       score = 0;
       remainingTime = timerDuration;
@@ -949,7 +1008,33 @@
       startTimer(true);
     }
     
-    // Achievements (simple example)
+    function openHighscoreOverlay() {
+      // Retrieve top 5 highscores and display them.
+      getTopHighScores((highscores) => {
+        const listEl = document.getElementById("highscoreList");
+        listEl.innerHTML = "";
+        if (highscores.length === 0) {
+          listEl.innerHTML = "<li>No high scores yet.</li>";
+        } else {
+          highscores.forEach((entry, index) => {
+            const li = document.createElement("li");
+            li.textContent = `${index + 1}. ${entry.name} - ${entry.score}`;
+            listEl.appendChild(li);
+          });
+        }
+        document.getElementById("highscoreOverlay").style.display = "flex";
+      });
+    }
+    
+    function updateLeaderboard() {
+      let highScore = localStorage.getItem("highScore") || 0;
+      const leaderboardList = document.getElementById("leaderboardList");
+      leaderboardList.innerHTML = "";
+      let li = document.createElement("li");
+      li.textContent = "High Score: " + highScore;
+      leaderboardList.appendChild(li);
+    }
+    
     function updateAchievements() {
       const achievementsList = document.getElementById("achievementsList");
       achievementsList.innerHTML = "";
@@ -962,15 +1047,7 @@
     
     updateLeaderboard();
     setInterval(updateAchievements, 5000);
-    
-    function updateLeaderboard() {
-      let highScore = localStorage.getItem("highScore") || 0;
-      const leaderboardList = document.getElementById("leaderboardList");
-      leaderboardList.innerHTML = "";
-      let li = document.createElement("li");
-      li.textContent = "High Score: " + highScore;
-      leaderboardList.appendChild(li);
-    }
+    setInterval(updateLeaderboard, 5000);
   </script>
 </body>
 </html>
