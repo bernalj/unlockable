@@ -28,28 +28,75 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0,0,0,0.9);
+      background: rgba(0,0,0,0.95);
       display: flex;
       justify-content: center;
       align-items: center;
       z-index: 30;
     }
+    /* Background animation elements */
+    #menuBackground {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 29;
+    }
+    #menuBackgroundGrid {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      display: grid;
+      grid-template-columns: repeat(3, 80px);
+      grid-template-rows: repeat(3, 80px);
+      gap: 30px;
+      opacity: 0.7;
+    }
+    #menuBackgroundGrid .circle {
+      background: linear-gradient(#666, #333 40%, #333 3%, #222);
+      box-shadow: inset 0 0 8px rgba(255,255,255,0.4), inset 0 0 5px rgba(0,0,0,0.3);
+    }
+    #menuBackgroundGrid .circle.active {
+      background: linear-gradient(#F57F17, #FDD835 3%, #FDD835 40%, #FFF176);
+      transform: scale(1.1);
+    }
     .main-menu-content {
       text-align: center;
+      z-index: 31;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 40px;
+      border-radius: 20px;
+      box-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
     }
-    .main-menu-content h2 {
-      margin-bottom: 20px;
-      font-size: 32px;
+    .main-menu-logo {
+      font-size: 48px;
+      font-weight: bold;
+      margin-bottom: 40px;
+      color: #FFD700;
+      text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+      letter-spacing: 2px;
     }
     .main-menu-content button {
-      margin: 10px;
-      padding: 10px 20px;
-      font-size: 18px;
+      display: block;
+      width: 200px;
+      margin: 15px auto;
+      padding: 12px 20px;
+      font-size: 20px;
       border: none;
-      background: #FFD700;
-      color: #222;
+      background: linear-gradient(45deg, rgba(255, 215, 0, 0.2), rgba(255, 165, 0, 0.2));
+      color: #FFD700;
       cursor: pointer;
-      border-radius: 5px;
+      border-radius: 10px;
+      transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+      backdrop-filter: blur(5px);
+      border: 1px solid rgba(255, 215, 0, 0.3);
+    }
+    .main-menu-content button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+      background: linear-gradient(45deg, rgba(255, 215, 0, 0.4), rgba(255, 165, 0, 0.4));
     }
     /* Header with score and pause button */
     #header {
@@ -142,6 +189,18 @@
     @keyframes slideDownFade {
       0% { transform: translate(-50%, 0); opacity: 1; }
       100% { transform: translate(-50%, 20px); opacity: 0; }
+    }
+    /* Score increment animation */
+    .score-increment {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translate(-50%, 0);
+      font-size: 16px;
+      color: #0f0;
+      opacity: 1;
+      pointer-events: none;
+      animation: slideDownFade 0.5s forwards;
     }
     /* Timer decrement animation in red */
     .timer-decrement {
@@ -243,6 +302,8 @@
       position: absolute;
       top: 0;
       left: 0;
+      width: 100%;
+      height: 100%;
       z-index: 1;
       pointer-events: none;
     }
@@ -257,7 +318,7 @@
       display: none;
       justify-content: center;
       align-items: center;
-      z-index: 20;
+      z-index: 40;
     }
     .overlay .content, .tutorial-content, .settings-content, .pause-content, .game-over-content, .highscore-content {
       background: #444;
@@ -278,18 +339,7 @@
     }
     /* Leaderboard and Achievements */
     #leaderboard, #achievements {
-      position: fixed;
-      bottom: 10px;
-      left: 10px;
-      background: #444;
-      padding: 10px;
-      border-radius: 5px;
-      font-size: 14px;
-      z-index: 10;
-    }
-    #achievements {
-      left: auto;
-      right: 10px;
+      display: none; /* Hide these elements but preserve their styles for the overlay versions */
     }
     #leaderboard h2, #achievements h2 {
       font-size: 16px;
@@ -317,38 +367,335 @@
       left: 0;
       width: 100%;
       height: 100%;
-      z-index: 35;
+      z-index: 45;
       display: none;
       justify-content: center;
       align-items: center;
       background: rgba(0,0,0,0.85);
     }
     #highscoreOverlay .highscore-content {
-      max-width: 400px;
+      background: #444;
+      padding: 30px;
+      border-radius: 10px;
+      text-align: left;
+      max-width: 500px;
       width: 90%;
+    }
+    #highscoreOverlay .highscore-content h2 {
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 24px;
+      color: #FFD700;
     }
     #highscoreList {
       text-align: left;
-      margin-top: 10px;
+      margin: 20px 0;
+      list-style: none;
     }
     #highscoreList li {
-      margin: 5px 0;
+      margin: 10px 0;
+      font-size: 18px;
+      padding: 8px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 5px;
+      transition: background-color 0.2s;
     }
-    #highscoreOverlay input[type="text"] {
-      width: 80%;
-      padding: 5px;
+    #highscoreList li:hover {
+      background: rgba(0, 0, 0, 0.3);
+    }
+    #highscoreOverlay .highscore-content button {
+      display: block;
+      margin: 25px auto 0;
+      padding: 12px 30px;
       font-size: 16px;
+      border: none;
+      background: #FFD700;
+      color: #222;
+      cursor: pointer;
+      border-radius: 5px;
+      transition: transform 0.2s, background-color 0.2s;
+    }
+    #highscoreOverlay .highscore-content button:hover {
+      transform: scale(1.05);
+      background: #FFC107;
+    }
+    /* Progress bar styling */
+    .progress-container {
+      position: fixed;
+      top: 170px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 200px;
+      height: 10px;
+      background: #444;
+      border-radius: 5px;
+      overflow: hidden;
+      z-index: 20;
+    }
+    .progress-bar {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, #FFD700, #FFA500);
+      transition: width 0.3s ease;
+    }
+    .stage-indicator {
+      position: fixed;
+      top: 185px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 14px;
+      color: #fff;
+      z-index: 20;
+    }
+    /* Multiplier bar container */
+    .multiplier-wrapper {
+      position: fixed;
+      bottom: calc(10vh - 40px);
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .streak-label {
+      color: white;
+      font-size: 14px;
+      font-weight: bold;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+      white-space: nowrap;
+    }
+    .multiplier-container {
+      width: 300px; /* Same as grid width (3 * 80px + 2 * 30px gap) */
+      height: 20px;
+      background: #444;
+      border-radius: 10px;
+      overflow: visible;
+      display: flex;
+      align-items: center;
+      position: relative;
+    }
+    .multiplier-bar {
+      height: 100%;
+      width: 0%;
+      background: #666; /* Default gray color */
+      transition: width 0.3s ease, background-color 0.3s ease;
+      border-radius: 10px;
+    }
+    /* Multiplier colors */
+    .multiplier-bar.x1 { background: #666; }
+    .multiplier-bar.x1-5 { background: #4CAF50; }
+    .multiplier-bar.x2 { background: #2196F3; }
+    .multiplier-bar.x3 { background: #9C27B0; }
+    .multiplier-bar.x4 { 
+      background: linear-gradient(90deg, #FFD700, #FFA500);
+      box-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
+      animation: goldenPulse 1.5s ease-in-out infinite;
+    }
+    @keyframes goldenPulse {
+      0% { 
+        box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+        filter: brightness(1);
+      }
+      50% { 
+        box-shadow: 0 0 25px rgba(255, 215, 0, 0.8);
+        filter: brightness(1.3);
+      }
+      100% { 
+        box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+        filter: brightness(1);
+      }
+    }
+    .multiplier-text {
+      position: absolute;
+      right: 5px;
+      color: white;
+      font-size: 14px;
+      font-weight: bold;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    }
+    /* Special styling for x4 multiplier text */
+    .multiplier-container:has(.multiplier-bar.x4) .multiplier-text {
+      color: #FF0000;
+      text-shadow: 
+        -1px -1px 0 #FFF,
+        1px -1px 0 #FFF,
+        -1px 1px 0 #FFF,
+        1px 1px 0 #FFF,
+        0 0 8px rgba(255,255,255,0.8);
+    }
+    /* Update pause menu to include main menu button */
+    .pause-content button {
+      display: block;
+      width: 200px;
+      margin: 15px auto;
+    }
+    #menuLineCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      pointer-events: none;
+    }
+    .tutorial-content {
+      background: #444;
+      padding: 30px;
+      border-radius: 10px;
+      text-align: left;
+      max-width: 500px;
+      width: 90%;
+    }
+    
+    .tutorial-content h2 {
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 24px;
+      color: #FFD700;
+    }
+    
+    .tutorial-content p {
+      margin: 0;
+      line-height: 1.6;
+      font-size: 16px;
+    }
+    
+    .tutorial-content button {
+      display: block;
+      margin: 25px auto 0;
+      padding: 12px 30px;
+      font-size: 16px;
+      border: none;
+      background: #FFD700;
+      color: #222;
+      cursor: pointer;
+      border-radius: 5px;
+      transition: transform 0.2s, background-color 0.2s;
+    }
+    
+    .tutorial-content button:hover {
+      transform: scale(1.05);
+      background: #FFC107;
+    }
+    
+    .settings-content {
+      background: #444;
+      padding: 30px;
+      border-radius: 10px;
+      text-align: left;
+      max-width: 500px;
+      width: 90%;
+    }
+    
+    .settings-content h2 {
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 24px;
+      color: #FFD700;
+    }
+    
+    .settings-content label {
+      display: block;
+      margin: 15px 0;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+    
+    .settings-content input[type="range"] {
+      width: 100%;
+      margin: 10px 0;
+    }
+    
+    .settings-content button {
+      display: block;
+      margin: 25px auto 0;
+      padding: 12px 30px;
+      font-size: 16px;
+      border: none;
+      background: #FFD700;
+      color: #222;
+      cursor: pointer;
+      border-radius: 5px;
+      transition: transform 0.2s, background-color 0.2s;
+    }
+    
+    .settings-content button:hover {
+      transform: scale(1.05);
+      background: #FFC107;
+    }
+    /* Stage complete overlay styling */
+    .stage-complete-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 40;
+    }
+    
+    .stage-complete-content {
+      background: #444;
+      padding: 30px;
+      border-radius: 10px;
+      text-align: center;
+      max-width: 500px;
+      width: 90%;
+    }
+    
+    .stage-complete-content h2 {
+      color: #FFD700;
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
+    
+    .stage-complete-content p {
+      margin: 10px 0;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+    
+    .stage-countdown {
+      font-size: 72px;
+      color: #FFD700;
+      margin: 20px 0;
+      font-weight: bold;
+      animation: pulseScale 1s infinite;
+    }
+    
+    @keyframes pulseScale {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1); }
     }
   </style>
 </head>
 <body>
   <!-- Main Menu Overlay -->
   <div id="mainMenu" class="overlay" style="display: flex;">
-    <div class="main-menu-content content">
-      <h2>Unlockable</h2>
+    <!-- Background animation -->
+    <div id="menuBackground">
+      <canvas id="menuLineCanvas"></canvas>
+      <div id="menuBackgroundGrid">
+        <div class="circle" data-index="1"></div>
+        <div class="circle" data-index="2"></div>
+        <div class="circle" data-index="3"></div>
+        <div class="circle" data-index="4"></div>
+        <div class="circle" data-index="5"></div>
+        <div class="circle" data-index="6"></div>
+        <div class="circle" data-index="7"></div>
+        <div class="circle" data-index="8"></div>
+        <div class="circle" data-index="9"></div>
+      </div>
+    </div>
+    <div class="main-menu-content">
+      <div class="main-menu-logo">UNLOCKABLE</div>
       <button id="playBtn">Play</button>
       <button id="instructionsBtn">Instructions</button>
-      <!-- Button to view high scores from main menu -->
+      <button id="optionsBtn">Options</button>
       <button id="viewHighscoresBtnMain">High Scores</button>
     </div>
   </div>
@@ -357,6 +704,11 @@
     <div id="score">Score: <span id="scoreCount">0</span></div>
     <div id="pauseBtn">Pause</div>
   </div>
+  <!-- Progress bar -->
+  <div class="progress-container">
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
+  <div class="stage-indicator" id="stageIndicator">Stage 1</div>
   <!-- Target pattern visual display -->
   <div id="targetPattern">
     <div class="target-grid">
@@ -394,15 +746,26 @@
       <div class="circle" data-index="9"></div>
     </div>
   </div>
+  <!-- Multiplier bar moved outside header -->
+  <div class="multiplier-wrapper">
+    <div class="streak-label">Streak:</div>
+    <div class="multiplier-container">
+      <div class="multiplier-bar"></div>
+      <div class="multiplier-text">1x</div>
+    </div>
+  </div>
   <!-- Tutorial/Onboarding Screen -->
   <div id="tutorial" class="overlay">
     <div class="tutorial-content content">
       <h2>Instructions</h2>
       <p>
-        Connect the circles in the pattern shown at the top.
-        If you drag between two circles with an intermediate circle in between, that circle will be auto-activated.
-        A correct pattern gives you points and adds 0.5 seconds to the timer.
-        If the input is wrong, 0.5 seconds are subtracted and the background flashes dark red.
+        Connect the circles in the pattern shown at the top of the screen. The pattern shows the order in which you need to connect the circles.
+      </p>
+      <p>
+        When you make a correct pattern, you'll earn points based on the pattern length and your current multiplier. You'll also get a 0.5 second time bonus.
+      </p>
+      <p>
+        Be careful though! Wrong patterns will cost you 0.5 seconds and reset your streak multiplier.
       </p>
       <button id="closeTutorial">Got it!</button>
     </div>
@@ -420,10 +783,6 @@
         <input type="range" id="volumeControl" min="0" max="1" step="0.1" value="1">
       </label>
       <br><br>
-      <label>
-        <input type="checkbox" id="exactMatchToggle" checked> Exact Match Mode
-      </label>
-      <br><br>
       <button id="closeSettings">Close</button>
     </div>
   </div>
@@ -439,14 +798,14 @@
       <button id="retryBtn">Retry</button>
     </div>
   </div>
-  <!-- Pause Overlay with Retry option and View High Scores button -->
+  <!-- Pause Overlay with Main Menu option -->
   <div id="pauseOverlay" class="overlay">
     <div class="pause-content content">
       <h2>Game Paused</h2>
       <button id="resumeBtn">Resume</button>
       <button id="retryPauseBtn">Retry</button>
-      <!-- New button to view high scores in Pause menu -->
-      <button id="viewHighscoresBtnPauseOverlay">View High Scores</button>
+      <button id="viewHighscoresBtnPauseOverlay">High Scores</button>
+      <button id="mainMenuBtn">Main Menu</button>
     </div>
   </div>
   <!-- Highscore Overlay -->
@@ -474,97 +833,306 @@
     // Global variables and game settings
     let score = 0;
     let drawnPattern = [];
-    let exact_match = true; // can be toggled via settings
+    let currentStage = 1;
+    let progress = 0;
 
-    // Pattern list as provided
-    let patterns = [
-      [1,2,3],
-      [3,2,1],
-      [4,5,6],
-      [6,5,4],
-      [7,8,9],
-      [9,8,7],
-      [1,4,7],
-      [7,4,1],
-      [2,5,8],
-      [8,5,2],
-      [3,6,9],
-      [9,6,3],
-      [1,5,9],
-      [9,5,1],
-      [3,5,7],
-      [1,2,3,6],
-      [3,2,1,4],
-      [7,8,9,6],
-      [9,8,7,4],
-      [1,4,7,8],
-      [7,4,1,2],
-      [1,5,9,8],
-      [3,5,7,8],
-      [2,5,8,9],
-      [1,2,3],
-      [3,2,1],
-      [4,5,6],
-      [6,5,4],
-      [7,8,9],
-      [9,8,7],
-      [1,4,7],
-      [7,4,1],
-      [2,5,8],
-      [8,5,2],
-      [3,6,9],
-      [9,6,3],
-      [1,5,9],
-      [9,5,1],
-      [3,5,7],
-      [1,2,3,6],
-      [3,2,1,4],
-      [7,8,9,6],
-      [9,8,7,4],
-      [1,4,7,8],
-      [7,4,1,2],
-      [1,5,9,8],
-      [3,5,7,8],
-      [2,5,8,9],
-      [1,2,3,6,9],
-      [3,2,1,4,7],
-      [1,4,7,8,9],
-      [1,8,3,4,9],
-      [2,7,4,9,5,1],
-      [3,8,1,6,7]
+    // Streak system variables
+    let streak = 0;
+    let multiplier = 1;
+    const STREAK_THRESHOLD = 8;
+    const MULTIPLIER_LEVELS = [
+      { threshold: 0, value: 1, class: 'x1' },
+      { threshold: 8, value: 1.5, class: 'x1-5' },
+      { threshold: 16, value: 2, class: 'x2' },
+      { threshold: 24, value: 3, class: 'x3' },
+      { threshold: 32, value: 4, class: 'x4' }
     ];
+
+    // Timing analysis data
+    const timingData = {
+      patterns: [],
+      currentPatternStart: 0,
+      stageStartTime: 0,
+      stageData: {}
+    };
+
+    // Calculate pattern complexity (more jumps and turns = more complex)
+    function calculatePatternComplexity(pattern) {
+      let complexity = 0;
+      for (let i = 1; i < pattern.length; i++) {
+        const prev = pattern[i - 1];
+        const curr = pattern[i];
+        // Check for jumps (non-adjacent nodes)
+        if (!getIntermediate(prev, curr)) {
+          const prevRow = Math.floor((prev - 1) / 3);
+          const prevCol = (prev - 1) % 3;
+          const currRow = Math.floor((curr - 1) / 3);
+          const currCol = (curr - 1) % 3;
+          const distance = Math.sqrt(Math.pow(currRow - prevRow, 2) + Math.pow(currCol - prevCol, 2));
+          complexity += distance;
+        }
+        // Check for direction changes
+        if (i > 1) {
+          const prevPrev = pattern[i - 2];
+          const angle = calculateAngle(prevPrev, prev, curr);
+          complexity += angle / 45; // Normalize angle contribution
+        }
+      }
+      return complexity;
+    }
+
+    // Calculate angle between three points
+    function calculateAngle(p1, p2, p3) {
+      const p1Row = Math.floor((p1 - 1) / 3);
+      const p1Col = (p1 - 1) % 3;
+      const p2Row = Math.floor((p2 - 1) / 3);
+      const p2Col = (p2 - 1) % 3;
+      const p3Row = Math.floor((p3 - 1) / 3);
+      const p3Col = (p3 - 1) % 3;
+      
+      const angle1 = Math.atan2(p1Row - p2Row, p1Col - p2Col);
+      const angle2 = Math.atan2(p3Row - p2Row, p3Col - p2Col);
+      let angle = Math.abs((angle1 - angle2) * 180 / Math.PI);
+      if (angle > 180) angle = 360 - angle;
+      return angle;
+    }
+
+    // Start timing a new pattern attempt
+    function startPatternTiming() {
+      timingData.currentPatternStart = performance.now();
+    }
+
+    // Record pattern completion data
+    function recordPatternCompletion(success) {
+      const endTime = performance.now();
+      const duration = endTime - timingData.currentPatternStart;
+      
+      const patternData = {
+        stage: currentStage,
+        pattern: currentTarget.slice(), // Clone the current pattern
+        length: currentTarget.length,
+        complexity: calculatePatternComplexity(currentTarget),
+        duration: duration,
+        success: success,
+        remainingTime: remainingTime,
+        timestamp: endTime
+      };
+      
+      timingData.patterns.push(patternData);
+      
+      // Initialize stage data if not exists
+      if (!timingData.stageData[currentStage]) {
+        timingData.stageData[currentStage] = {
+          attempts: 0,
+          successes: 0,
+          totalTime: 0,
+          patterns: []
+        };
+      }
+      
+      // Update stage statistics
+      const stageStats = timingData.stageData[currentStage];
+      stageStats.attempts++;
+      if (success) {
+        stageStats.successes++;
+        stageStats.totalTime += duration;
+      }
+      stageStats.patterns.push(patternData);
+      
+      // Log pattern completion data
+      console.log(`Pattern Completion Data:`, {
+        stage: currentStage,
+        patternLength: currentTarget.length,
+        complexity: patternData.complexity.toFixed(2),
+        duration: duration.toFixed(2) + 'ms',
+        success: success,
+        remainingTime: remainingTime.toFixed(1) + 's'
+      });
+      
+      // Every 5 successful patterns, log stage statistics
+      if (success && stageStats.successes % 5 === 0) {
+        logStageStatistics(currentStage);
+      }
+    }
+
+    // Log detailed stage statistics
+    function logStageStatistics(stage) {
+      const stats = timingData.stageData[stage];
+      if (!stats || stats.successes === 0) return;
+      
+      const successfulPatterns = stats.patterns.filter(p => p.success);
+      const avgTime = stats.totalTime / stats.successes;
+      const successRate = (stats.successes / stats.attempts * 100).toFixed(1);
+      
+      const timePerLength = {};
+      successfulPatterns.forEach(p => {
+        if (!timePerLength[p.length]) {
+          timePerLength[p.length] = [];
+        }
+        timePerLength[p.length].push(p.duration);
+      });
+      
+      const complexityStats = successfulPatterns.reduce((acc, p) => {
+        acc.total += p.complexity;
+        acc.count++;
+        return acc;
+      }, { total: 0, count: 0 });
+      
+      console.log(`\nStage ${stage} Statistics:`, {
+        totalPatterns: stats.attempts,
+        successRate: successRate + '%',
+        averageTime: avgTime.toFixed(2) + 'ms',
+        averageComplexity: (complexityStats.total / complexityStats.count).toFixed(2),
+        timePerPatternLength: Object.fromEntries(
+          Object.entries(timePerLength).map(([length, times]) => [
+            length,
+            (times.reduce((a, b) => a + b, 0) / times.length).toFixed(2) + 'ms'
+          ])
+        ),
+        remainingTimeAverage: successfulPatterns.reduce((acc, p) => acc + p.remainingTime, 0) / successfulPatterns.length
+      });
+    }
+
+    // Stage configurations
+    const stageConfigs = {
+      1: { time: 20, requiredPatterns: 10 },      // No change
+      2: { time: 25, requiredPatterns: 10 },    // Removed multiplier
+      3: { time: 28, requiredPatterns: 12 },    // Removed multiplier
+      4: { time: 30, requiredPatterns: 12 },    // Removed multiplier
+      5: { time: 38, requiredPatterns: 15 },    // Removed multiplier
+      6: { time: 42, requiredPatterns: 15 },    // Removed multiplier
+      7: { time: 60, requiredPatterns: 15 },    // Removed multiplier
+      8: { time: 65, requiredPatterns: 15 },    // Removed multiplier
+      9: { time: 70, requiredPatterns: 15 },    // Removed multiplier
+      10: { time: 80, requiredPatterns: 20 }    // Removed multiplier
+    };
+
+    // Pattern lists for each stage
+    const stagePatterns = {
+      1: [ // Simple lines and diagonals (no changes needed - these are all valid)
+        [1,2,3], [3,2,1], [4,5,6], [6,5,4],
+        [7,8,9], [9,8,7], [1,4,7], [7,4,1],
+        [2,5,8], [8,5,2], [3,6,9], [9,6,3],
+        [1,5,9], [9,5,1], [3,5,7], [7,5,3]
+      ],
+      2: [ // 4-node patterns (revised to avoid auto-activation conflicts)
+        [1,2,3,6], [3,2,1,4], [7,8,9,6], [9,8,7,4],
+        [1,4,7,8], [7,4,1,2], [1,2,5,9], [3,6,5,7],
+        [7,4,5,3], [9,6,5,1], [1,4,5,9], [3,6,5,7],
+        [2,5,6,9], [4,5,8,7], [8,5,4,1], [2,5,6,9]
+      ],
+      3: [ // 5-node patterns with zigzags (revised)
+        [1,2,3,6,9], [9,6,3,2,1], [7,8,9,6,3],
+        [1,4,7,8,9], [3,2,1,4,7], [9,8,7,4,1],
+        [1,2,5,8,9], [3,6,5,4,1], [7,4,5,6,9],
+        [9,8,5,2,1], [1,4,5,6,9], [7,8,5,2,1]
+      ],
+      4: [ // Complex 5-node patterns (completely revised to avoid center conflicts)
+        [1,2,5,8,7], [3,6,5,4,1], [9,8,5,2,3],
+        [7,4,5,6,9], [1,4,5,8,9], [3,2,5,4,7],
+        [9,6,5,2,1], [7,8,5,6,3], [1,2,5,6,7],
+        [3,2,5,8,9], [7,4,5,2,3], [9,8,5,4,1]
+      ],
+      5: [ // 6-node patterns (revised)
+        [1,2,5,8,7,4], [3,6,5,4,1,2], [9,8,5,2,1,4],
+        [7,4,5,6,9,8], [1,4,5,8,9,6], [3,2,5,4,7,8],
+        [9,6,5,2,1,4], [7,8,5,6,3,2], [1,2,5,6,9,8],
+        [3,2,5,8,7,4], [9,6,5,4,1,2], [7,4,5,2,3,6]
+      ],
+      6: [ // Complex 6-node patterns with strategic jumps (revised)
+        [1,2,5,9,6,3], [7,4,5,3,2,1], [9,8,5,1,4,7],
+        [3,6,5,7,8,9], [1,4,5,9,6,3], [7,8,5,1,2,3],
+        [9,6,5,1,4,7], [3,2,5,7,8,9], [1,4,5,3,6,9],
+        [7,8,5,3,2,1], [9,6,5,7,4,1], [3,2,5,9,8,7]
+      ],
+      7: [ // 7-node patterns (revised)
+        [1,2,5,9,6,3,4], [7,4,5,3,2,1,8], [9,8,5,1,4,7,6],
+        [3,6,5,7,8,9,2], [1,4,5,9,6,3,8], [7,8,5,1,2,3,6],
+        [9,6,5,1,4,7,2], [3,2,5,7,8,9,4], [1,4,5,3,6,9,8],
+        [7,8,5,3,2,1,6], [9,6,5,7,4,1,2], [3,2,5,9,8,7,4]
+      ],
+      8: [ // 8-node patterns (revised)
+        [1,2,5,9,6,3,4,7], [7,4,5,3,2,1,8,9], [9,8,5,1,4,7,6,3],
+        [3,6,5,7,8,9,2,1], [1,4,5,9,6,3,8,7], [7,8,5,1,2,3,6,9],
+        [9,6,5,1,4,7,2,3], [3,2,5,7,8,9,4,1], [1,4,5,3,6,9,8,7],
+        [7,8,5,3,2,1,6,9], [9,6,5,7,4,1,2,3], [3,2,5,9,8,7,4,1]
+      ],
+      9: [ // 9-node patterns (revised to ensure all moves are possible)
+        [1,2,5,9,6,3,4,7,8], [7,4,5,3,2,1,8,9,6], [9,8,5,1,4,7,6,3,2],
+        [3,6,5,7,8,9,2,1,4], [1,4,5,9,6,3,8,7,2], [7,8,5,1,2,3,6,9,4],
+        [9,6,5,1,4,7,2,3,8], [3,2,5,7,8,9,4,1,6], [1,4,5,3,6,9,8,7,2],
+        [7,8,5,3,2,1,6,9,4], [9,6,5,7,4,1,2,3,8], [3,2,5,9,8,7,4,1,6]
+      ],
+      10: [ // Ultimate challenge patterns (revised)
+        [1,2,5,9,6,3,4,7,8], [3,2,5,7,4,1,8,9,6], [9,8,5,1,4,7,6,3,2],
+        [7,4,5,3,6,9,2,1,8], [1,4,5,9,8,7,2,3,6], [3,6,5,1,2,7,8,9,4],
+        [9,8,5,3,2,1,4,7,6], [7,4,5,9,6,3,2,1,8], [1,2,5,7,8,9,6,3,4],
+        [3,6,5,9,8,7,2,1,4], [9,8,5,1,2,3,6,7,4], [7,4,5,3,6,9,8,1,2]
+      ]
+    };
+
+    let patterns = stagePatterns[1];
     let currentTarget = [];
     
-    // Set timer duration to 25 seconds
-    const timerDuration = 25;
+    // Set initial timer duration based on current stage
+    let timerDuration = stageConfigs[1].time;
     let timerInterval = null;
     let remainingTime = timerDuration;
     
-    // Audio settings – using files from audio/ folder
+    // Audio settings
     let soundEnabled = true;
     let volume = 1;
-    let tapSound = new Audio("audio/tap.wav");
-    let correctSound = new Audio("audio/correct.wav");
-    let incorrectSound = new Audio("audio/incorrect.wav");
     
     // New variables for dynamic hit percentages
     const ACTIVE_HIT_PERCENTAGE = 1;
     const INACTIVE_HIT_PERCENTAGE = 0.6;
     
-    // Helper function to play a sound by type using cloning for overlapping playback
+    // Sound pool configuration
+    const SOUND_POOL_SIZE = 4;
+    const soundPools = {
+      tap: Array(SOUND_POOL_SIZE).fill(null).map(() => new Audio("audio/tap.wav")),
+      correct: Array(SOUND_POOL_SIZE).fill(null).map(() => new Audio("audio/correct.wav")),
+      incorrect: Array(SOUND_POOL_SIZE).fill(null).map(() => new Audio("audio/incorrect.wav"))
+    };
+    const soundPoolIndexes = {
+      tap: 0,
+      correct: 0,
+      incorrect: 0
+    };
+
+    // Preload sounds with very low volume to handle mobile autoplay restrictions
+    function preloadSounds() {
+      Object.values(soundPools).flat().forEach(audio => {
+        audio.volume = 0.01;
+        audio.play().then(() => {
+          audio.pause();
+          audio.currentTime = 0;
+        }).catch(() => {
+          // Ignore autoplay errors
+        });
+      });
+    }
+    
+    // Helper function to play a sound by type using sound pool
     function playSound(type) {
-      let sound;
-      if (type === "tap") {
-        sound = tapSound.cloneNode();
-      } else if (type === "correct") {
-        sound = correctSound.cloneNode();
-      } else if (type === "incorrect") {
-        sound = incorrectSound.cloneNode();
-      } else {
-        return;
+      if (!soundEnabled || !soundPools[type]) return;
+      
+      const pool = soundPools[type];
+      let audio = pool[soundPoolIndexes[type]];
+      
+      // Reset audio if it's still playing
+      if (!audio.paused) {
+        audio.pause();
+        audio.currentTime = 0;
       }
-      sound.volume = volume;
-      sound.play();
+      
+      audio.volume = volume;
+      audio.play().catch(() => {
+        // Ignore playback errors on mobile
+      });
+      
+      // Update pool index for next use
+      soundPoolIndexes[type] = (soundPoolIndexes[type] + 1) % SOUND_POOL_SIZE;
     }
     
     // Helper to animate time subtraction in red.
@@ -636,6 +1204,7 @@
       currentTarget = patterns[Math.floor(Math.random() * patterns.length)];
       updateUI();
       resetDrawing();
+      startPatternTiming();
     }
     
     // Reset drawn pattern and clear states.
@@ -650,9 +1219,14 @@
     // Canvas for drawing lines.
     const canvas = document.getElementById("lineCanvas");
     const ctx = canvas.getContext("2d");
+    
     function resizeCanvas() {
-      canvas.width = document.getElementById("gameArea").offsetWidth;
-      canvas.height = document.getElementById("gameArea").offsetHeight;
+      const gameArea = document.getElementById("gameArea");
+      canvas.width = gameArea.offsetWidth;
+      canvas.height = gameArea.offsetHeight;
+      canvas.style.width = '100%';
+      canvas.style.height = '100%';
+      drawLines(); // Redraw lines after resize
     }
     window.addEventListener("resize", resizeCanvas);
     resizeCanvas();
@@ -660,10 +1234,11 @@
     // Get center coordinates of a circle element.
     function getCircleCenter(circle) {
       const rect = circle.getBoundingClientRect();
-      const canvasRect = canvas.getBoundingClientRect();
+      const gameArea = document.getElementById("gameArea");
+      const gameAreaRect = gameArea.getBoundingClientRect();
       return {
-        x: rect.left + rect.width / 2 - canvasRect.left,
-        y: rect.top + rect.height / 2 - canvasRect.top
+        x: rect.left + rect.width / 2 - gameAreaRect.left,
+        y: rect.top + rect.height / 2 - gameAreaRect.top
       };
     }
     
@@ -677,11 +1252,18 @@
     function drawLines() {
       clearCanvas();
       if (drawnPattern.length === 0) return;
+      
       ctx.lineWidth = 5;
       ctx.strokeStyle = "#FFD700";
       ctx.beginPath();
+      
+      const gameArea = document.getElementById("gameArea");
+      const gameAreaRect = gameArea.getBoundingClientRect();
+      
       for (let i = 0; i < drawnPattern.length; i++) {
-        const circle = document.querySelector(`.circle[data-index="${drawnPattern[i]}"]`);
+        const circle = document.querySelector(`#gameArea .circle[data-index="${drawnPattern[i]}"]`);
+        if (!circle) continue;
+        
         const center = getCircleCenter(circle);
         if (i === 0) {
           ctx.moveTo(center.x, center.y);
@@ -689,13 +1271,15 @@
           ctx.lineTo(center.x, center.y);
         }
       }
+      
       if (currentPointer) {
         ctx.lineTo(currentPointer.x, currentPointer.y);
       }
+      
       ctx.stroke();
     }
     
-    // Check if drawnPattern contains target pattern (subsequence).
+    // When input is complete, check pattern validity.
     function checkPattern() {
       let target = currentTarget;
       let drawn = drawnPattern;
@@ -715,22 +1299,86 @@
       return true;
     }
     
+    // Update multiplier bar width based on target pattern width
+    function updateMultiplierBarWidth() {
+      const targetPattern = document.getElementById('targetPattern');
+      const multiplierContainer = document.querySelector('.multiplier-container');
+      if (targetPattern && multiplierContainer) {
+        const targetWidth = targetPattern.offsetWidth;
+        multiplierContainer.style.width = (targetWidth * 1.1) + 'px';
+      }
+    }
+
+    // Update streak and multiplier
+    function updateStreak(success) {
+      if (!success) {
+        streak = 0;
+        multiplier = 1;
+      } else {
+        streak++;
+      }
+      
+      // Update multiplier based on streak
+      for (let i = MULTIPLIER_LEVELS.length - 1; i >= 0; i--) {
+        if (streak >= MULTIPLIER_LEVELS[i].threshold) {
+          multiplier = MULTIPLIER_LEVELS[i].value;
+          updateMultiplierBar(MULTIPLIER_LEVELS[i].class);
+          break;
+        }
+      }
+    }
+
+    // Update multiplier bar visual
+    function updateMultiplierBar(className) {
+      const bar = document.querySelector('.multiplier-bar');
+      const text = document.querySelector('.multiplier-text');
+      
+      // Remove all multiplier classes
+      MULTIPLIER_LEVELS.forEach(level => bar.classList.remove(level.class));
+      // Add current multiplier class
+      bar.classList.add(className);
+      
+      // If at x4 multiplier (className is 'x4'), keep bar at 100%
+      if (className === 'x4') {
+        bar.style.width = '100%';
+      } else {
+        // Otherwise, show progress to next threshold
+        const progress = (streak % STREAK_THRESHOLD) / STREAK_THRESHOLD * 100;
+        bar.style.width = progress + '%';
+      }
+      
+      text.textContent = multiplier + 'x';
+    }
+
     // When input is complete, check pattern validity.
     function completePattern() {
-      let isValid;
-      if (exact_match) {
-        isValid = checkExact();
-      } else {
-        isValid = checkPattern();
+      let isValid = false;
+      if (drawnPattern.length === currentTarget.length) {
+        isValid = true;
+        for (let i = 0; i < currentTarget.length; i++) {
+          if (drawnPattern[i] !== currentTarget[i]) {
+            isValid = false;
+            break;
+          }
+        }
       }
+      
+      recordPatternCompletion(isValid);
+      updateStreak(isValid);
+      
       if (isValid) {
-        score += (exact_match ? 100 : 80);
+        const basePoints = currentTarget.length * 5;
+        const pointsGained = Math.round(basePoints * multiplier);
+        score += pointsGained;
         if (soundEnabled) { 
           playSound("correct");
         }
         remainingTime += 0.5;
         updateTimerDisplay();
         animateTimerIncrement();
+        animateScoreIncrement(pointsGained);
+        progress += (100 / stageConfigs[currentStage].requiredPatterns);
+        updateProgress();
         animateSuccess();
       } else {
         remainingTime -= 0.5;
@@ -741,6 +1389,7 @@
         flashBackground();
         updateTimerDisplay();
         resetDrawing();
+        startPatternTiming(); // Start timing the next attempt
       }
     }
     
@@ -752,7 +1401,10 @@
       targetElement.addEventListener("animationend", function handler() {
         targetElement.classList.remove("explode");
         targetElement.removeEventListener("animationend", handler);
-        generateTarget();
+        // Only generate new target if we're not at stage completion
+        if (progress < 100) {
+          generateTarget();
+        }
       });
       resetDrawing();
     }
@@ -777,6 +1429,16 @@
       setTimeout(() => { timerElem.removeChild(incElem); }, 500);
     }
     
+    // Animate the score increment.
+    function animateScoreIncrement(points) {
+      const scoreElem = document.getElementById("score");
+      const incElem = document.createElement("span");
+      incElem.className = "score-increment";
+      incElem.textContent = `+${points}`;
+      scoreElem.appendChild(incElem);
+      setTimeout(() => { scoreElem.removeChild(incElem); }, 500);
+    }
+    
     // (animateTimerDecrement and flashBackground are declared above, only once)
     
     // Countdown overlay: show large countdown numbers.
@@ -796,7 +1458,10 @@
     
     // Timer function with optional reset parameter.
     function startTimer(reset = true) {
-      if (reset) { remainingTime = timerDuration; }
+      if (reset) { 
+        timerDuration = stageConfigs[currentStage].time;
+        remainingTime = timerDuration; 
+      }
       updateTimerDisplay();
       timerInterval = setInterval(() => {
         remainingTime--;
@@ -853,10 +1518,15 @@
         clientX = e.clientX;
         clientY = e.clientY;
       }
-      const canvasRect = canvas.getBoundingClientRect();
-      currentPointer = { x: clientX - canvasRect.left, y: clientY - canvasRect.top };
       
-      const circles = document.querySelectorAll('.circle');
+      const gameArea = document.getElementById("gameArea");
+      const gameAreaRect = gameArea.getBoundingClientRect();
+      currentPointer = {
+        x: clientX - gameAreaRect.left,
+        y: clientY - gameAreaRect.top
+      };
+      
+      const circles = document.querySelectorAll('#gameArea .circle');
       for (let i = 0; i < circles.length; i++) {
         let circle = circles[i];
         let index = parseInt(circle.getAttribute("data-index"));
@@ -954,19 +1624,29 @@
     const tutorial = document.getElementById("tutorial");
     const closeTutorial = document.getElementById("closeTutorial");
     closeTutorial.addEventListener("click", () => {
-      tutorial.style.display = "none";
+      document.getElementById("tutorial").style.display = "none";
       document.getElementById("mainMenu").style.display = "flex";
+      startMenuAnimation(); // Restart menu animation when returning
     });
     
-    // Main Menu: Play and Instructions buttons.
+    // Main Menu navigation
     document.getElementById("playBtn").addEventListener("click", () => {
+      stopMenuAnimation();
       document.getElementById("mainMenu").style.display = "none";
+      preloadSounds();
+      updateMultiplierBarWidth();
       generateTarget();
       startTimer(true);
     });
+
     document.getElementById("instructionsBtn").addEventListener("click", () => {
+      stopMenuAnimation();
       document.getElementById("mainMenu").style.display = "none";
-      tutorial.style.display = "flex";
+      document.getElementById("tutorial").style.display = "flex";
+    });
+
+    document.getElementById("optionsBtn").addEventListener("click", () => {
+      document.getElementById("settings").style.display = "flex";
     });
     
     // Open highscore overlay from main menu button
@@ -1001,9 +1681,17 @@
     
     function restartGame() {
       score = 0;
-      remainingTime = timerDuration;
+      currentStage = 1;
+      progress = 0;
+      streak = 0; // Reset streak
+      multiplier = 1; // Reset multiplier
+      patterns = stagePatterns[1];
+      remainingTime = stageConfigs[1].time;
       updateTimerDisplay();
       updateUI();
+      updateProgress();
+      updateMultiplierBar('x1'); // Reset multiplier bar
+      document.getElementById('stageIndicator').textContent = `Stage ${currentStage}`;
       generateTarget();
       startTimer(true);
     }
@@ -1026,28 +1714,258 @@
       });
     }
     
-    function updateLeaderboard() {
-      let highScore = localStorage.getItem("highScore") || 0;
-      const leaderboardList = document.getElementById("leaderboardList");
-      leaderboardList.innerHTML = "";
-      let li = document.createElement("li");
-      li.textContent = "High Score: " + highScore;
-      leaderboardList.appendChild(li);
-    }
-    
-    function updateAchievements() {
-      const achievementsList = document.getElementById("achievementsList");
-      achievementsList.innerHTML = "";
-      if (score >= 500) {
-        let li = document.createElement("li");
-        li.textContent = "Score 500+ Achieved!";
-        achievementsList.appendChild(li);
+    // Update progress bar and check for stage completion
+    function updateProgress() {
+      const progressBar = document.getElementById('progressBar');
+      const stageIndicator = document.getElementById('stageIndicator');
+      progressBar.style.width = progress + '%';
+      
+      if (progress >= 100) {
+        if (currentStage < 10) {
+          currentStage++;
+          patterns = stagePatterns[currentStage];
+          progress = 0;
+          progressBar.style.width = '0%';
+          stageIndicator.textContent = `Stage ${currentStage}`;
+          showStageComplete();
+        } else {
+          // Game complete
+          showGameComplete();
+        }
       }
     }
+
+    // Show stage complete overlay
+    function showStageComplete() {
+      logStageStatistics(currentStage);
+      console.log('\nStage Complete Analysis:', {
+        stage: currentStage,
+        finalRemainingTime: remainingTime.toFixed(1) + 's',
+        timeLimit: stageConfigs[currentStage].time + 's',
+        timePressure: (remainingTime / stageConfigs[currentStage].time).toFixed(2)
+      });
+      
+      clearInterval(timerInterval);
+      const overlay = document.createElement('div');
+      overlay.className = 'stage-complete-overlay';
+      
+      const content = document.createElement('div');
+      content.className = 'stage-complete-content';
+      
+      content.innerHTML = `
+        <h2>Stage ${currentStage - 1} Complete!</h2>
+        <p>Get ready for Stage ${currentStage}</p>
+        <p>Time: ${stageConfigs[currentStage].time} seconds</p>
+        <p>Points per pattern: ${currentStage > 1 ? (stagePatterns[currentStage][0].length * 5) : 15}</p>
+        <p>${currentStage > 5 ? "Complex patterns await..." : "New patterns await..."}</p>
+        <div class="stage-countdown">3</div>
+      `;
+      
+      overlay.appendChild(content);
+      document.body.appendChild(overlay);
+      
+      // Generate the first pattern of the new stage before showing the overlay
+      patterns = stagePatterns[currentStage];
+      currentTarget = patterns[Math.floor(Math.random() * patterns.length)];
+      updateTargetDisplay();
+      
+      // Countdown animation
+      let count = 3;
+      const countdownEl = content.querySelector('.stage-countdown');
+      
+      const countdownInterval = setInterval(() => {
+        count--;
+        if (count > 0) {
+          countdownEl.textContent = count;
+        } else {
+          clearInterval(countdownInterval);
+          document.body.removeChild(overlay);
+          remainingTime = stageConfigs[currentStage].time;
+          updateTimerDisplay();
+          startTimer(true);
+        }
+      }, 1000);
+    }
+
+    // Show game complete overlay
+    function showGameComplete() {
+      const overlay = document.createElement('div');
+      overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.8);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 40;
+      `;
+      const message = document.createElement('div');
+      message.style.cssText = `
+        background: #444;
+        padding: 20px;
+        border-radius: 10px;
+        text-align: center;
+      `;
+      message.innerHTML = `
+        <h2>Congratulations!</h2>
+        <p>You've completed all stages!</p>
+        <p>Final Score: ${score}</p>
+        <button onclick="location.reload()" style="
+          margin-top: 15px;
+          padding: 10px 20px;
+          font-size: 16px;
+          border: none;
+          background: #FFD700;
+          color: #222;
+          cursor: pointer;
+          border-radius: 5px;
+        ">Play Again</button>
+      `;
+      overlay.appendChild(message);
+      document.body.appendChild(overlay);
+    }
+
+    // Menu background animation
+    const menuPatterns = [
+      [1, 5, 9],
+      [3, 6, 9, 5, 1],
+      [2, 4, 8, 6],
+      [1, 8, 3, 4]
+    ];
+    let currentMenuPattern = 0;
+    let menuAnimationInterval = null;
+    let menuDrawnPattern = [];
     
-    updateLeaderboard();
-    setInterval(updateAchievements, 5000);
-    setInterval(updateLeaderboard, 5000);
+    // Initialize menu background
+    const menuCanvas = document.getElementById("menuLineCanvas");
+    const menuCtx = menuCanvas.getContext("2d");
+    
+    function resizeMenuCanvas() {
+      const menuBackground = document.getElementById("menuBackground");
+      menuCanvas.width = menuBackground.offsetWidth;
+      menuCanvas.height = menuBackground.offsetHeight;
+      drawMenuLines(); // Redraw lines after resize
+    }
+    window.addEventListener("resize", resizeMenuCanvas);
+    
+    // Ensure canvas is properly sized on load
+    window.addEventListener("load", resizeMenuCanvas);
+    
+    function clearMenuCanvas() {
+      menuCtx.clearRect(0, 0, menuCanvas.width, menuCanvas.height);
+    }
+    
+    function getMenuCircleCenter(index) {
+      const circle = document.querySelector(`#menuBackgroundGrid .circle[data-index="${index}"]`);
+      const rect = circle.getBoundingClientRect();
+      const canvasRect = menuCanvas.getBoundingClientRect();
+      return {
+        x: rect.left + rect.width / 2 - canvasRect.left,
+        y: rect.top + rect.height / 2 - canvasRect.top
+      };
+    }
+    
+    function drawMenuLines() {
+      clearMenuCanvas();
+      if (menuDrawnPattern.length === 0) return;
+      
+      menuCtx.lineWidth = 5;
+      menuCtx.strokeStyle = "rgba(255, 215, 0, 0.5)";
+      menuCtx.beginPath();
+      
+      for (let i = 0; i < menuDrawnPattern.length; i++) {
+        const center = getMenuCircleCenter(menuDrawnPattern[i]);
+        if (i === 0) {
+          menuCtx.moveTo(center.x, center.y);
+        } else {
+          menuCtx.lineTo(center.x, center.y);
+        }
+      }
+      menuCtx.stroke();
+    }
+
+    function resetMenuPattern() {
+      menuDrawnPattern = [];
+      document.querySelectorAll('#menuBackgroundGrid .circle').forEach(circle => {
+        circle.classList.remove('active');
+      });
+      clearMenuCanvas();
+    }
+    
+    function animateMenuPattern() {
+      const pattern = menuPatterns[currentMenuPattern];
+      let step = 0;
+      
+      function drawNextPoint() {
+        if (step < pattern.length) {
+          const index = pattern[step];
+          menuDrawnPattern.push(index);
+          const circle = document.querySelector(`#menuBackgroundGrid .circle[data-index="${index}"]`);
+          circle.classList.add('active');
+          drawMenuLines();
+          step++;
+          setTimeout(drawNextPoint, 300);
+        } else {
+          setTimeout(() => {
+            resetMenuPattern();
+            currentMenuPattern = (currentMenuPattern + 1) % menuPatterns.length;
+            setTimeout(() => {
+              animateMenuPattern();
+            }, 700);
+          }, 1000);
+        }
+      }
+      
+      drawNextPoint();
+    }
+
+    function startMenuAnimation() {
+      resetMenuPattern();
+      animateMenuPattern();
+    }
+
+    function stopMenuAnimation() {
+      resetMenuPattern();
+      if (menuAnimationInterval) {
+        clearInterval(menuAnimationInterval);
+        menuAnimationInterval = null;
+      }
+    }
+
+    // Menu navigation
+    document.getElementById("mainMenuBtn").addEventListener("click", () => {
+      // Stop the game
+      clearInterval(timerInterval);
+      // Hide pause overlay
+      document.getElementById("pauseOverlay").style.display = "none";
+      // Reset game state
+      score = 0;
+      currentStage = 1;
+      progress = 0;
+      streak = 0;
+      multiplier = 1;
+      patterns = stagePatterns[1];
+      remainingTime = stageConfigs[1].time;
+      // Update UI
+      updateUI();
+      updateProgress();
+      updateMultiplierBar('x1');
+      document.getElementById('stageIndicator').textContent = 'Stage 1';
+      // Show main menu and start animation
+      document.getElementById("mainMenu").style.display = "flex";
+      startMenuAnimation();
+    });
+    
+    // Start menu animation when page loads
+    startMenuAnimation();
+    
+    // Update settings close button to return to main menu
+    document.getElementById("closeSettings").addEventListener("click", () => {
+      document.getElementById("settings").style.display = "none";
+    });
   </script>
 </body>
 </html>
