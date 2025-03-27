@@ -951,11 +951,11 @@
     let stageConfigs = {};
     let patterns = [];
 
-    // Add this function to load the levels data
+    // Load game levels from JSON file
     async function loadLevels() {
         try {
             const response = await fetch('levels.json', {
-                cache: 'no-store', // Forces a network request instead of using cache
+                cache: 'no-store', // Prevents browser caching
                 headers: {
                     'Cache-Control': 'no-cache',
                     'Pragma': 'no-cache'
@@ -967,18 +967,18 @@
             }
             const data = await response.json();
             
-            // Validate the data structure
+            // Validate data structure requirements
             if (!data.stageConfigs || !data.stagePatterns) {
                 throw new Error('Invalid levels data structure');
             }
 
-            // Validate that we have at least stage 1 data
+            // Ensure stage 1 data exists
             if (!data.stageConfigs[1] || !data.stagePatterns[1]) {
                 throw new Error('Missing stage 1 configuration');
             }
 
             stageConfigs = data.stageConfigs;
-            patterns = data.stagePatterns[1]; // Initialize with stage 1 patterns
+            patterns = data.stagePatterns[1]; // Set initial stage patterns
 
             return true;
         } catch (error) {
@@ -987,15 +987,14 @@
             return false;
         }
     }
-
-    // Modify the play button click handler to prevent game start if levels fail to load
+    
+    // Play button event handler
     document.getElementById("playBtn").addEventListener("click", async () => {
         stopMenuAnimation();
         
-        // Load levels before starting the game
+        // Initialize game with level data
         const levelsLoaded = await loadLevels();
         if (!levelsLoaded) {
-            // Return to main menu if levels failed to load
             document.getElementById("mainMenu").style.display = "flex";
             startMenuAnimation();
             return;
@@ -1008,7 +1007,7 @@
         startTimer(true);
     });
 
-    // Modify the updateProgress function to check for valid stage data
+    // Updates progress bar and handles stage transitions
     function updateProgress() {
         const progressBar = document.getElementById('progressBar');
         const stageIndicator = document.getElementById('stageIndicator');
@@ -1023,7 +1022,7 @@
                 progressBar.style.width = '0%';
                 stageIndicator.textContent = `Stage ${currentStage}`;
                 
-                // Initialize new stage data
+                // Initialize stage data tracking
                 timingData.stageData[currentStage] = {
                     attempts: 0,
                     successes: 0,
@@ -1041,7 +1040,7 @@
         }
     }
 
-    // Modify the startTimer function to properly handle the timer countdown
+    // Timer control function
     function startTimer(reset = true) {
         if (reset) { 
             const stageConfig = stageConfigs[currentStage];
@@ -1063,79 +1062,15 @@
             remainingTime -= 1;
             updateTimerDisplay();
             
-            // End game when time reaches 0 (not negative)
+            // Handle game over condition
             if (remainingTime <= 0) {
                 clearInterval(timerInterval);
-                remainingTime = 0; // Ensure we don't show negative time
+                remainingTime = 0;
                 updateTimerDisplay();
                 gameOver();
             }
         }, 1000);
     }
-
-    // Pattern lists for each stage
-    let stagePatterns = {
-      1: [ // Simple lines and diagonals (no changes needed - these are all valid)
-        [1,2,3], [3,2,1], [4,5,6], [6,5,4],
-        [7,8,9], [9,8,7], [1,4,7], [7,4,1],
-        [2,5,8], [8,5,2], [3,6,9], [9,6,3],
-        [1,5,9], [9,5,1], [3,5,7], [7,5,3]
-      ],
-      2: [ // 4-node patterns (revised to avoid auto-activation conflicts)
-        [1,2,3,6], [3,2,1,4], [7,8,9,6], [9,8,7,4],
-        [1,4,7,8], [7,4,1,2], [1,2,5,9], [3,6,5,7],
-        [7,4,5,3], [9,6,5,1], [1,4,5,9], [3,6,5,7],
-        [2,5,6,9], [4,5,8,7], [8,5,4,1], [2,5,6,9]
-      ],
-      3: [ // 5-node patterns with zigzags (revised)
-        [1,2,3,6,9], [9,6,3,2,1], [7,8,9,6,3],
-        [1,4,7,8,9], [3,2,1,4,7], [9,8,7,4,1],
-        [1,2,5,8,9], [3,6,5,4,1], [7,4,5,6,9],
-        [9,8,5,2,1], [1,4,5,6,9], [7,8,5,2,1]
-      ],
-      4: [ // Complex 5-node patterns (completely revised to avoid center conflicts)
-        [1,2,5,8,7], [3,6,5,4,1], [9,8,5,2,3],
-        [7,4,5,6,9], [1,4,5,8,9], [3,2,5,4,7],
-        [9,6,5,2,1], [7,8,5,6,3], [1,2,5,6,7],
-        [3,2,5,8,9], [7,4,5,2,3], [9,8,5,4,1]
-      ],
-      5: [ // 6-node patterns (revised)
-        [1,2,5,8,7,4], [3,6,5,4,1,2], [9,8,5,2,1,4],
-        [7,4,5,6,9,8], [1,4,5,8,9,6], [3,2,5,4,7,8],
-        [9,6,5,2,1,4], [7,8,5,6,3,2], [1,2,5,6,9,8],
-        [3,2,5,8,7,4], [9,6,5,4,1,2], [7,4,5,2,3,6]
-      ],
-      6: [ // Complex 6-node patterns with strategic jumps (revised)
-        [1,2,5,9,6,3], [7,4,5,3,2,1], [9,8,5,1,4,7],
-        [3,6,5,7,8,9], [1,4,5,9,6,3], [7,8,5,1,2,3],
-        [9,6,5,1,4,7], [3,2,5,7,8,9], [1,4,5,3,6,9],
-        [7,8,5,3,2,1], [9,6,5,7,4,1], [3,2,5,9,8,7]
-      ],
-      7: [ // 7-node patterns (revised)
-        [1,2,5,9,6,3,4], [7,4,5,3,2,1,8], [9,8,5,1,4,7,6],
-        [3,6,5,7,8,9,2], [1,4,5,9,6,3,8], [7,8,5,1,2,3,6],
-        [9,6,5,1,4,7,2], [3,2,5,7,8,9,4], [1,4,5,3,6,9,8],
-        [7,8,5,3,2,1,6], [9,6,5,7,4,1,2], [3,2,5,9,8,7,4]
-      ],
-      8: [ // 8-node patterns (revised)
-        [1,2,5,9,6,3,4,7], [7,4,5,3,2,1,8,9], [9,8,5,1,4,7,6,3],
-        [3,6,5,7,8,9,2,1], [1,4,5,9,6,3,8,7], [7,8,5,1,2,3,6,9],
-        [9,6,5,1,4,7,2,3], [3,2,5,7,8,9,4,1], [1,4,5,3,6,9,8,7],
-        [7,8,5,3,2,1,6,9], [9,6,5,7,4,1,2,3], [3,2,5,9,8,7,4,1]
-      ],
-      9: [ // 9-node patterns (revised to ensure all moves are possible)
-        [1,2,5,9,6,3,4,7,8], [7,4,5,3,2,1,8,9,6], [9,8,5,1,4,7,6,3,2],
-        [3,6,5,7,8,9,2,1,4], [1,4,5,9,6,3,8,7,2], [7,8,5,1,2,3,6,9,4],
-        [9,6,5,1,4,7,2,3,8], [3,2,5,7,8,9,4,1,6], [1,4,5,3,6,9,8,7,2],
-        [7,8,5,3,2,1,6,9,4], [9,6,5,7,4,1,2,3,8], [3,2,5,9,8,7,4,1,6]
-      ],
-      10: [ // Ultimate challenge patterns (revised)
-        [1,2,5,9,6,3,4,7,8], [3,2,5,7,4,1,8,9,6], [9,8,5,1,4,7,6,3,2],
-        [7,4,5,3,6,9,2,1,8], [1,4,5,9,8,7,2,3,6], [3,6,5,1,2,7,8,9,4],
-        [9,8,5,3,2,1,4,7,6], [7,4,5,9,6,3,2,1,8], [1,2,5,7,8,9,6,3,4],
-        [3,6,5,9,8,7,2,1,4], [9,8,5,1,2,3,6,7,4], [7,4,5,3,6,9,8,1,2]
-      ]
-    };
 
     let currentTarget = [];
     
@@ -1570,113 +1505,114 @@
     let isDrawing = false;
     const gameArea = document.getElementById("gameArea");
     
+    // Handle mouse/touch input start
     function handleStart(e) {
-      e.preventDefault();
-      isDrawing = true;
-      currentPointer = null;
-      let target = e.target;
-      if (target.classList.contains("circle")) {
-        const index = parseInt(target.getAttribute("data-index"));
-        if (!drawnPattern.includes(index)) {
-          drawnPattern.push(index);
-          target.classList.add("active");
-          if (soundEnabled) {
-            playSound("tap");
-          }
-        }
-      }
-    }
-    
-    function handleMove(e) {
-      if (!isDrawing) return;
-      let clientX, clientY;
-      if (e.touches) {
-        clientX = e.touches[0].clientX;
-        clientY = e.touches[0].clientY;
-      } else {
-        clientX = e.clientX;
-        clientY = e.clientY;
-      }
-      
-      const gameArea = document.getElementById("gameArea");
-      const gameAreaRect = gameArea.getBoundingClientRect();
-      currentPointer = {
-        x: clientX - gameAreaRect.left,
-        y: clientY - gameAreaRect.top
-      };
-      
-      const circles = document.querySelectorAll('#gameArea .circle');
-      for (let i = 0; i < circles.length; i++) {
-        let circle = circles[i];
-        let index = parseInt(circle.getAttribute("data-index"));
-        if (drawnPattern.includes(index)) continue;
-        const rect = circle.getBoundingClientRect();
-        
-        // If no circle has been pressed yet, use bounding box check
-        if (drawnPattern.length === 0) {
-            if (clientX >= rect.left && clientX <= rect.right &&
-                clientY >= rect.top && clientY <= rect.bottom) {
+        e.preventDefault();
+        isDrawing = true;
+        currentPointer = null;
+        let target = e.target;
+        if (target.classList.contains("circle")) {
+            const index = parseInt(target.getAttribute("data-index"));
+            if (!drawnPattern.includes(index)) {
                 drawnPattern.push(index);
-                circle.classList.add("active");
+                target.classList.add("active");
                 if (soundEnabled) {
                     playSound("tap");
                 }
             }
+        }
+    }
+
+    // Handle mouse/touch movement during pattern drawing
+    function handleMove(e) {
+        if (!isDrawing) return;
+        let clientX, clientY;
+        if (e.touches) {
+            clientX = e.touches[0].clientX;
+            clientY = e.touches[0].clientY;
         } else {
-            const centerX = rect.left + rect.width / 2;
-            const centerY = rect.top + rect.height / 2;
-            const dx = clientX - centerX;
-            const dy = clientY - centerY;
-            const distance = Math.sqrt(dx * dx + dy * dy);
+            clientX = e.clientX;
+            clientY = e.clientY;
+        }
+        
+        const gameArea = document.getElementById("gameArea");
+        const gameAreaRect = gameArea.getBoundingClientRect();
+        currentPointer = {
+            x: clientX - gameAreaRect.left,
+            y: clientY - gameAreaRect.top
+        };
+        
+        const circles = document.querySelectorAll('#gameArea .circle');
+        for (let i = 0; i < circles.length; i++) {
+            let circle = circles[i];
+            let index = parseInt(circle.getAttribute("data-index"));
+            if (drawnPattern.includes(index)) continue;
+            const rect = circle.getBoundingClientRect();
             
-            let nextTarget = currentTarget[drawnPattern.length];
-            let dynamicHitPercentage = (index === nextTarget) ? ACTIVE_HIT_PERCENTAGE : INACTIVE_HIT_PERCENTAGE;
-            let threshold = CIRCLE_RADIUS * dynamicHitPercentage;
-            
-            if (distance <= threshold) {
-                let last = drawnPattern[drawnPattern.length - 1];
-                
-                // First check for intermediate circle
-                let intermediate = getIntermediate(last, index);
-                if (intermediate && !drawnPattern.includes(intermediate)) {
-                    // Change the selector to be more specific and verify the element is found
-                    const intermediateCircle = document.querySelector(`#gameArea .grid .circle[data-index="${intermediate}"]`);
-                    if (intermediateCircle) {
-                        drawnPattern.push(intermediate);
-                        // Force immediate activation
-                        requestAnimationFrame(() => {
-                            intermediateCircle.classList.add("active");
-                            if (soundEnabled) {
-                                playSound("tap");
-                            }
-                        });
-                        drawLines(); // Update lines after adding intermediate
+            // Initial circle activation using bounding box
+            if (drawnPattern.length === 0) {
+                if (clientX >= rect.left && clientX <= rect.right &&
+                    clientY >= rect.top && clientY <= rect.bottom) {
+                    drawnPattern.push(index);
+                    circle.classList.add("active");
+                    if (soundEnabled) {
+                        playSound("tap");
                     }
                 }
+            } else {
+                // Distance-based circle activation
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                const dx = clientX - centerX;
+                const dy = clientY - centerY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
                 
-                // Then add the target circle
-                drawnPattern.push(index);
-                circle.classList.add("active");
-                if (soundEnabled) {
-                    playSound("tap");
+                let nextTarget = currentTarget[drawnPattern.length];
+                let dynamicHitPercentage = (index === nextTarget) ? ACTIVE_HIT_PERCENTAGE : INACTIVE_HIT_PERCENTAGE;
+                let threshold = CIRCLE_RADIUS * dynamicHitPercentage;
+                
+                if (distance <= threshold) {
+                    let last = drawnPattern[drawnPattern.length - 1];
+                    
+                    // Check and activate intermediate circle if present
+                    let intermediate = getIntermediate(last, index);
+                    if (intermediate && !drawnPattern.includes(intermediate)) {
+                        const intermediateCircle = document.querySelector(`#gameArea .grid .circle[data-index="${intermediate}"]`);
+                        if (intermediateCircle) {
+                            drawnPattern.push(intermediate);
+                            requestAnimationFrame(() => {
+                                intermediateCircle.classList.add("active");
+                                if (soundEnabled) {
+                                    playSound("tap");
+                                }
+                            });
+                            drawLines();
+                        }
+                    }
+                    
+                    // Activate target circle
+                    drawnPattern.push(index);
+                    circle.classList.add("active");
+                    if (soundEnabled) {
+                        playSound("tap");
+                    }
+                    drawLines();
+                    break;
                 }
-                drawLines(); // Update lines after adding target
-                break; // Exit the loop after adding circles
             }
         }
-      }
-      drawLines();
+        drawLines();
     }
-    
+
+    // Handle mouse/touch input end
     function handleEnd(e) {
-      if (!isDrawing) return;
-      isDrawing = false;
-      currentPointer = null;
-      drawLines();
-      // Only check pattern if the user drew something
-      if (drawnPattern.length > 0) {
-        completePattern();
-      }
+        if (!isDrawing) return;
+        isDrawing = false;
+        currentPointer = null;
+        drawLines();
+        if (drawnPattern.length > 0) {
+            completePattern();
+        }
     }
     
     gameArea.addEventListener("mousedown", handleStart);
@@ -1724,10 +1660,9 @@
     document.getElementById("playBtn").addEventListener("click", async () => {
       stopMenuAnimation();
       
-      // Load levels before starting the game
+      // Initialize game with level data
       const levelsLoaded = await loadLevels();
       if (!levelsLoaded) {
-          // Return to main menu if levels failed to load
           document.getElementById("mainMenu").style.display = "flex";
           startMenuAnimation();
           return;
@@ -2000,113 +1935,119 @@
         });
     }
 
-    // Menu background animation
+    // Menu background animation patterns
     const menuPatterns = [
-      [1, 5, 9],
-      [3, 6, 9, 5, 1],
-      [2, 4, 8, 6],
-      [1, 8, 3, 4]
+        [1, 5, 9],
+        [3, 6, 9, 5, 1],
+        [2, 4, 8, 6],
+        [1, 8, 3, 4]
     ];
+
+    // Menu animation state variables
     let currentMenuPattern = 0;
     let menuAnimationInterval = null;
     let menuDrawnPattern = [];
-    
-    // Initialize menu background
+
+    // Initialize and manage menu canvas
     const menuCanvas = document.getElementById("menuLineCanvas");
     const menuCtx = menuCanvas.getContext("2d");
-    
+
+    // Resize menu canvas to match background dimensions
     function resizeMenuCanvas() {
-      const menuBackground = document.getElementById("menuBackground");
-      menuCanvas.width = menuBackground.offsetWidth;
-      menuCanvas.height = menuBackground.offsetHeight;
-      drawMenuLines(); // Redraw lines after resize
+        const menuBackground = document.getElementById("menuBackground");
+        menuCanvas.width = menuBackground.offsetWidth;
+        menuCanvas.height = menuBackground.offsetHeight;
+        drawMenuLines();
     }
-    window.addEventListener("resize", resizeMenuCanvas);
-    
-    // Ensure canvas is properly sized on load
-    window.addEventListener("load", resizeMenuCanvas);
-    
+
+    // Clear menu canvas content
     function clearMenuCanvas() {
-      menuCtx.clearRect(0, 0, menuCanvas.width, menuCanvas.height);
+        menuCtx.clearRect(0, 0, menuCanvas.width, menuCanvas.height);
     }
-    
+
+    // Calculate center position of menu circle
     function getMenuCircleCenter(index) {
-      const circle = document.querySelector(`#menuBackgroundGrid .circle[data-index="${index}"]`);
-      const rect = circle.getBoundingClientRect();
-      const canvasRect = menuCanvas.getBoundingClientRect();
-      return {
-        x: rect.left + rect.width / 2 - canvasRect.left,
-        y: rect.top + rect.height / 2 - canvasRect.top
-      };
+        const circle = document.querySelector(`#menuBackgroundGrid .circle[data-index="${index}"]`);
+        const rect = circle.getBoundingClientRect();
+        const canvasRect = menuCanvas.getBoundingClientRect();
+        return {
+            x: rect.left + rect.width / 2 - canvasRect.left,
+            y: rect.top + rect.height / 2 - canvasRect.top
+        };
     }
-    
+
+    // Draw connecting lines in menu background
     function drawMenuLines() {
-      clearMenuCanvas();
-      if (menuDrawnPattern.length === 0) return;
-      
-      menuCtx.lineWidth = 5;
-      menuCtx.strokeStyle = "rgba(255, 215, 0, 0.5)";
-      menuCtx.beginPath();
-      
-      for (let i = 0; i < menuDrawnPattern.length; i++) {
-        const center = getMenuCircleCenter(menuDrawnPattern[i]);
-        if (i === 0) {
-          menuCtx.moveTo(center.x, center.y);
-        } else {
-          menuCtx.lineTo(center.x, center.y);
+        clearMenuCanvas();
+        if (menuDrawnPattern.length === 0) return;
+        
+        menuCtx.lineWidth = 5;
+        menuCtx.strokeStyle = "rgba(255, 215, 0, 0.5)";
+        menuCtx.beginPath();
+        
+        for (let i = 0; i < menuDrawnPattern.length; i++) {
+            const center = getMenuCircleCenter(menuDrawnPattern[i]);
+            if (i === 0) {
+                menuCtx.moveTo(center.x, center.y);
+            } else {
+                menuCtx.lineTo(center.x, center.y);
+            }
         }
-      }
-      menuCtx.stroke();
+        menuCtx.stroke();
     }
 
+    // Reset menu pattern state
     function resetMenuPattern() {
-      menuDrawnPattern = [];
-      document.querySelectorAll('#menuBackgroundGrid .circle').forEach(circle => {
-        circle.classList.remove('active');
-      });
-      clearMenuCanvas();
+        menuDrawnPattern = [];
+        document.querySelectorAll('#menuBackgroundGrid .circle').forEach(circle => {
+            circle.classList.remove('active');
+        });
+        clearMenuCanvas();
+    }
+
+    // Animate menu background pattern
+    function animateMenuPattern() {
+        const pattern = menuPatterns[currentMenuPattern];
+        let step = 0;
+        
+        function drawNextPoint() {
+            if (step < pattern.length) {
+                const index = pattern[step];
+                menuDrawnPattern.push(index);
+                const circle = document.querySelector(`#menuBackgroundGrid .circle[data-index="${index}"]`);
+                circle.classList.add('active');
+                drawMenuLines();
+                step++;
+                setTimeout(drawNextPoint, 300);
+            } else {
+                setTimeout(() => {
+                    resetMenuPattern();
+                    currentMenuPattern = (currentMenuPattern + 1) % menuPatterns.length;
+                    setTimeout(() => {
+                        animateMenuPattern();
+                    }, 700);
+                }, 1000);
+            }
+        }
+        
+        drawNextPoint();
+    }
+
+    // Start menu background animation
+    function startMenuAnimation() {
+        resetMenuPattern();
+        animateMenuPattern();
+    }
+
+    // Stop menu background animation
+    function stopMenuAnimation() {
+        resetMenuPattern();
+        if (menuAnimationInterval) {
+            clearInterval(menuAnimationInterval);
+            menuAnimationInterval = null;
+        }
     }
     
-    function animateMenuPattern() {
-      const pattern = menuPatterns[currentMenuPattern];
-      let step = 0;
-      
-      function drawNextPoint() {
-        if (step < pattern.length) {
-          const index = pattern[step];
-          menuDrawnPattern.push(index);
-          const circle = document.querySelector(`#menuBackgroundGrid .circle[data-index="${index}"]`);
-          circle.classList.add('active');
-          drawMenuLines();
-          step++;
-          setTimeout(drawNextPoint, 300);
-        } else {
-          setTimeout(() => {
-            resetMenuPattern();
-            currentMenuPattern = (currentMenuPattern + 1) % menuPatterns.length;
-            setTimeout(() => {
-              animateMenuPattern();
-            }, 700);
-          }, 1000);
-        }
-      }
-      
-      drawNextPoint();
-    }
-
-    function startMenuAnimation() {
-      resetMenuPattern();
-      animateMenuPattern();
-    }
-
-    function stopMenuAnimation() {
-      resetMenuPattern();
-      if (menuAnimationInterval) {
-        clearInterval(menuAnimationInterval);
-        menuAnimationInterval = null;
-      }
-    }
-
     // Menu navigation
     document.getElementById("mainMenuBtn").addEventListener("click", () => {
       // Stop the game
