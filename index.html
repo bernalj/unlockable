@@ -947,60 +947,134 @@
       stageStats.patterns.push(patternData);
     }
 
-    // Log detailed stage statistics
-    function logStageStatistics(stage) {
-      const stats = timingData.stageData[stage];
-      if (!stats || stats.successes === 0) return;
-      
-      const successfulPatterns = stats.patterns.filter(p => p.success);
-      const avgTime = stats.totalTime / stats.successes;
-      const successRate = (stats.successes / stats.attempts * 100).toFixed(1);
-      
-      const timePerLength = {};
-      successfulPatterns.forEach(p => {
-        if (!timePerLength[p.length]) {
-          timePerLength[p.length] = [];
+    // Replace the stageConfigs and stagePatterns declarations with:
+    let stageConfigs = {};
+    let patterns = [];
+
+    // Add this function to load the levels data
+    async function loadLevels() {
+        try {
+            const response = await fetch('levels.json', {
+                cache: 'no-store', // Forces a network request instead of using cache
+                headers: {
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache'
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            
+            // Validate the data structure
+            if (!data.stageConfigs || !data.stagePatterns) {
+                throw new Error('Invalid levels data structure');
+            }
+
+            // Validate that we have at least stage 1 data
+            if (!data.stageConfigs[1] || !data.stagePatterns[1]) {
+                throw new Error('Missing stage 1 configuration');
+            }
+
+            stageConfigs = data.stageConfigs;
+            patterns = data.stagePatterns[1]; // Initialize with stage 1 patterns
+
+            return true;
+        } catch (error) {
+            console.error('Error loading levels:', error);
+            alert('Error loading game levels. Please ensure levels.json is properly configured.');
+            return false;
         }
-        timePerLength[p.length].push(p.duration);
-      });
-      
-      const complexityStats = successfulPatterns.reduce((acc, p) => {
-        acc.total += p.complexity;
-        acc.count++;
-        return acc;
-      }, { total: 0, count: 0 });
-      
-      console.log(`\nStage ${stage} Statistics:`, {
-        totalPatterns: stats.attempts,
-        successRate: successRate + '%',
-        averageTime: avgTime.toFixed(2) + 'ms',
-        averageComplexity: (complexityStats.total / complexityStats.count).toFixed(2),
-        timePerPatternLength: Object.fromEntries(
-          Object.entries(timePerLength).map(([length, times]) => [
-            length,
-            (times.reduce((a, b) => a + b, 0) / times.length).toFixed(2) + 'ms'
-          ])
-        ),
-        remainingTimeAverage: successfulPatterns.reduce((acc, p) => acc + p.remainingTime, 0) / successfulPatterns.length
-      });
     }
 
-    // Stage configurations
-    const stageConfigs = {
-      1: { time: 20, requiredPatterns: 10 },      // No change
-      2: { time: 25, requiredPatterns: 10 },    // Removed multiplier
-      3: { time: 28, requiredPatterns: 12 },    // Removed multiplier
-      4: { time: 30, requiredPatterns: 12 },    // Removed multiplier
-      5: { time: 38, requiredPatterns: 15 },    // Removed multiplier
-      6: { time: 42, requiredPatterns: 15 },    // Removed multiplier
-      7: { time: 60, requiredPatterns: 15 },    // Removed multiplier
-      8: { time: 65, requiredPatterns: 15 },    // Removed multiplier
-      9: { time: 70, requiredPatterns: 15 },    // Removed multiplier
-      10: { time: 80, requiredPatterns: 20 }    // Removed multiplier
-    };
+    // Modify the play button click handler to prevent game start if levels fail to load
+    document.getElementById("playBtn").addEventListener("click", async () => {
+        stopMenuAnimation();
+        
+        // Load levels before starting the game
+        const levelsLoaded = await loadLevels();
+        if (!levelsLoaded) {
+            // Return to main menu if levels failed to load
+            document.getElementById("mainMenu").style.display = "flex";
+            startMenuAnimation();
+            return;
+        }
+        
+        document.getElementById("mainMenu").style.display = "none";
+        preloadSounds();
+        updateMultiplierBarWidth();
+        generateTarget();
+        startTimer(true);
+    });
+
+    // Modify the updateProgress function to check for valid stage data
+    function updateProgress() {
+        const progressBar = document.getElementById('progressBar');
+        const stageIndicator = document.getElementById('stageIndicator');
+        progressBar.style.width = progress + '%';
+        
+        if (progress >= 100) {
+            const nextStage = currentStage + 1;
+            if (patterns[nextStage] && stageConfigs[nextStage]) {
+                currentStage = nextStage;
+                patterns = patterns[currentStage];
+                progress = 0;
+                progressBar.style.width = '0%';
+                stageIndicator.textContent = `Stage ${currentStage}`;
+                
+                // Initialize new stage data
+                timingData.stageData[currentStage] = {
+                    attempts: 0,
+                    successes: 0,
+                    totalTime: 0,
+                    patterns: [],
+                    timeLimit: stageConfigs[currentStage].time,
+                    requiredPatterns: stageConfigs[currentStage].requiredPatterns,
+                    startTime: Date.now()
+                };
+                
+                showStageComplete();
+            } else {
+                showGameComplete();
+            }
+        }
+    }
+
+    // Modify the startTimer function to properly handle the timer countdown
+    function startTimer(reset = true) {
+        if (reset) { 
+            const stageConfig = stageConfigs[currentStage];
+            if (!stageConfig) {
+                alert('Error: Could not load stage configuration. Please refresh the page.');
+                return;
+            }
+            timerDuration = stageConfig.time;
+            remainingTime = timerDuration;
+            
+            if (!currentGameId) {
+                currentGameId = Date.now().toString();
+                timingData.gameStartTime = Date.now();
+            }
+        }
+        
+        clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+            remainingTime -= 1;
+            updateTimerDisplay();
+            
+            // End game when time reaches 0 (not negative)
+            if (remainingTime <= 0) {
+                clearInterval(timerInterval);
+                remainingTime = 0; // Ensure we don't show negative time
+                updateTimerDisplay();
+                gameOver();
+            }
+        }, 1000);
+    }
 
     // Pattern lists for each stage
-    const stagePatterns = {
+    let stagePatterns = {
       1: [ // Simple lines and diagonals (no changes needed - these are all valid)
         [1,2,3], [3,2,1], [4,5,6], [6,5,4],
         [7,8,9], [9,8,7], [1,4,7], [7,4,1],
@@ -1063,11 +1137,10 @@
       ]
     };
 
-    let patterns = stagePatterns[1];
     let currentTarget = [];
     
     // Set initial timer duration based on current stage
-    let timerDuration = stageConfigs[1].time;
+    let timerDuration = 20; // Default time
     let timerInterval = null;
     let remainingTime = timerDuration;
     
@@ -1403,12 +1476,16 @@
     
     // Update timer display.
     function updateTimerDisplay() {
-      document.getElementById("timerCount").textContent = Math.floor(remainingTime);
-      if (remainingTime <= 5 && remainingTime > 0) {
-        showCountdown(Math.floor(remainingTime));
-      } else {
-        document.getElementById("countdownOverlay").style.display = "none";
-      }
+        // Show 0 instead of negative numbers
+        const timeToShow = Math.max(0, Math.ceil(remainingTime));
+        document.getElementById("timerCount").textContent = timeToShow;
+        
+        // Show countdown overlay for numbers 5 through 1
+        if (remainingTime > 0 && remainingTime <= 5) {
+            showCountdown(Math.ceil(remainingTime));
+        } else {
+            document.getElementById("countdownOverlay").style.display = "none";
+        }
     }
     
     // Animate the +0.5 timer increment.
@@ -1447,55 +1524,6 @@
     // Hitbox settings for circles
     const CIRCLE_DIAMETER = 80;
     const CIRCLE_RADIUS = CIRCLE_DIAMETER / 2;
-    
-    // Timer function with optional reset parameter.
-    function startTimer(reset = true) {
-      if (reset) { 
-        timerDuration = stageConfigs[currentStage].time;
-        remainingTime = timerDuration;
-        
-        // Only generate new gameId when currentGameId is null (new game)
-        if (!currentGameId) {
-          currentGameId = Date.now().toString();
-        }
-        
-        // Reset timing data for new game
-        if (!timingData || !timingData.gameStartTime) {
-          timingData = {
-            patterns: [],
-            stageData: {},
-            gameStartTime: Date.now(),
-            finalScore: 0,
-            finalStage: currentStage,
-            gameDuration: 0
-          };
-        }
-        
-        // Initialize data for the current stage
-        timingData.stageData[currentStage] = {
-          attempts: 0,
-          successes: 0,
-          totalTime: 0,
-          patterns: [],
-          timeLimit: stageConfigs[currentStage].time,
-          requiredPatterns: stageConfigs[currentStage].requiredPatterns,
-          startTime: Date.now()
-        };
-      } else {
-        // When resuming or starting a new stage, just update the timer duration
-        timerDuration = stageConfigs[currentStage].time;
-        remainingTime = timerDuration;
-      }
-      updateTimerDisplay();
-      timerInterval = setInterval(() => {
-        remainingTime--;
-        updateTimerDisplay();
-        if (remainingTime <= 0) {
-          clearInterval(timerInterval);
-          gameOver();
-        }
-      }, 1000);
-    }
     
     // Game Over: show game over overlay.
     function gameOver() {
@@ -1583,46 +1611,58 @@
         let index = parseInt(circle.getAttribute("data-index"));
         if (drawnPattern.includes(index)) continue;
         const rect = circle.getBoundingClientRect();
-        // If no circle has been pressed yet, use bounding box check.
+        
+        // If no circle has been pressed yet, use bounding box check
         if (drawnPattern.length === 0) {
-          if (clientX >= rect.left && clientX <= rect.right &&
-              clientY >= rect.top && clientY <= rect.bottom) {
-            drawnPattern.push(index);
-            circle.classList.add("active");
-            if (soundEnabled) {
-              playSound("tap");
-            }
-          }
-        } else {
-          // Determine the next required target from the current target pattern.
-          let nextTarget = currentTarget[drawnPattern.length];
-          // Set dynamic hit percentage based on whether this circle is the next target.
-          let dynamicHitPercentage = (index === nextTarget) ? ACTIVE_HIT_PERCENTAGE : INACTIVE_HIT_PERCENTAGE;
-          let threshold = CIRCLE_RADIUS * dynamicHitPercentage;
-          const centerX = rect.left + rect.width / 2;
-          const centerY = rect.top + rect.height / 2;
-          const dx = clientX - centerX;
-          const dy = clientY - centerY;
-          const distance = Math.sqrt(dx * dx + dy * dy);
-          if (distance <= threshold) {
-            let last = drawnPattern[drawnPattern.length - 1];
-            let intermediate = getIntermediate(last, index);
-            if (intermediate && !drawnPattern.includes(intermediate)) {
-              let autoCircle = document.querySelector(`.circle[data-index="${intermediate}"]`);
-              drawnPattern.push(intermediate);
-              if (autoCircle) {
-                autoCircle.classList.add("active");
+            if (clientX >= rect.left && clientX <= rect.right &&
+                clientY >= rect.top && clientY <= rect.bottom) {
+                drawnPattern.push(index);
+                circle.classList.add("active");
                 if (soundEnabled) {
-                  setTimeout(() => { playSound("tap"); }, 100);
+                    playSound("tap");
                 }
-              }
             }
-            drawnPattern.push(index);
-            circle.classList.add("active");
-            if (soundEnabled) {
-              playSound("tap");
+        } else {
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const dx = clientX - centerX;
+            const dy = clientY - centerY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            let nextTarget = currentTarget[drawnPattern.length];
+            let dynamicHitPercentage = (index === nextTarget) ? ACTIVE_HIT_PERCENTAGE : INACTIVE_HIT_PERCENTAGE;
+            let threshold = CIRCLE_RADIUS * dynamicHitPercentage;
+            
+            if (distance <= threshold) {
+                let last = drawnPattern[drawnPattern.length - 1];
+                
+                // First check for intermediate circle
+                let intermediate = getIntermediate(last, index);
+                if (intermediate && !drawnPattern.includes(intermediate)) {
+                    // Change the selector to be more specific and verify the element is found
+                    const intermediateCircle = document.querySelector(`#gameArea .grid .circle[data-index="${intermediate}"]`);
+                    if (intermediateCircle) {
+                        drawnPattern.push(intermediate);
+                        // Force immediate activation
+                        requestAnimationFrame(() => {
+                            intermediateCircle.classList.add("active");
+                            if (soundEnabled) {
+                                playSound("tap");
+                            }
+                        });
+                        drawLines(); // Update lines after adding intermediate
+                    }
+                }
+                
+                // Then add the target circle
+                drawnPattern.push(index);
+                circle.classList.add("active");
+                if (soundEnabled) {
+                    playSound("tap");
+                }
+                drawLines(); // Update lines after adding target
+                break; // Exit the loop after adding circles
             }
-          }
         }
       }
       drawLines();
@@ -1681,8 +1721,18 @@
     });
     
     // Main Menu navigation
-    document.getElementById("playBtn").addEventListener("click", () => {
+    document.getElementById("playBtn").addEventListener("click", async () => {
       stopMenuAnimation();
+      
+      // Load levels before starting the game
+      const levelsLoaded = await loadLevels();
+      if (!levelsLoaded) {
+          // Return to main menu if levels failed to load
+          document.getElementById("mainMenu").style.display = "flex";
+          startMenuAnimation();
+          return;
+      }
+      
       document.getElementById("mainMenu").style.display = "none";
       preloadSounds();
       updateMultiplierBarWidth();
@@ -1737,8 +1787,8 @@
       progress = 0;
       streak = 0;
       multiplier = 1;
-      patterns = stagePatterns[1];
-      remainingTime = stageConfigs[1].time;
+      patterns = stagePatterns[1] || [[1,2,3], [3,2,1]]; // Use fallback only if needed
+      remainingTime = stageConfigs[1]?.time || 20; // Use fallback time if needed
       updateTimerDisplay();
       updateUI();
       updateProgress();
@@ -1766,41 +1816,6 @@
       });
     }
     
-    // Update progress bar and check for stage completion
-    function updateProgress() {
-      const progressBar = document.getElementById('progressBar');
-      const stageIndicator = document.getElementById('stageIndicator');
-      progressBar.style.width = progress + '%';
-      
-      if (progress >= 100) {
-        // Log completion of current stage
-        logStageStatistics(currentStage);
-        
-        if (currentStage < 10) {
-          currentStage++;
-          patterns = stagePatterns[currentStage];
-          progress = 0;
-          progressBar.style.width = '0%';
-          stageIndicator.textContent = `Stage ${currentStage}`;
-          
-          // Initialize new stage data
-          timingData.stageData[currentStage] = {
-            attempts: 0,
-            successes: 0,
-            totalTime: 0,
-            patterns: [],
-            timeLimit: stageConfigs[currentStage].time,
-            requiredPatterns: stageConfigs[currentStage].requiredPatterns,
-            startTime: Date.now()
-          };
-          
-          showStageComplete();
-        } else {
-          showGameComplete();
-        }
-      }
-    }
-
     // Show stage complete overlay
     function showStageComplete() {
         // Log completion of current stage
@@ -1838,14 +1853,6 @@
             startTime: Date.now()
         };
         
-        logStageStatistics(currentStage);
-        console.log('\nStage Complete Analysis:', {
-          stage: currentStage,
-          finalRemainingTime: remainingTime.toFixed(1) + 's',
-          timeLimit: stageConfigs[currentStage].time + 's',
-          timePressure: (remainingTime / stageConfigs[currentStage].time).toFixed(2)
-        });
-        
         clearInterval(timerInterval);
         const overlay = document.createElement('div');
         overlay.className = 'stage-complete-overlay';
@@ -1865,7 +1872,14 @@
         document.body.appendChild(overlay);
         
         // Generate the first pattern of the new stage before showing the overlay
-        patterns = stagePatterns[currentStage];
+        if (stagePatterns[currentStage]) {
+            patterns = stagePatterns[currentStage];
+        } else {
+            console.error(`Missing patterns for stage ${currentStage}`);
+            showGameComplete(); // End game if we don't have patterns for next stage
+            return;
+        }
+        
         currentTarget = patterns[Math.floor(Math.random() * patterns.length)];
         updateTargetDisplay();
         
@@ -1902,43 +1916,88 @@
             console.error('Error saving complete game stats:', error);
         });
         
+        // Get the high score before creating the overlay
+        let highScore = localStorage.getItem("highScore") || 0;
+        if (score > highScore) { 
+            localStorage.setItem("highScore", score);
+            highScore = score;
+        }
+        
         const overlay = document.createElement('div');
         overlay.style.cssText = `
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          background: rgba(0,0,0,0.8);
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          z-index: 40;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 40;
         `;
         const message = document.createElement('div');
         message.style.cssText = `
-          background: #444;
-          padding: 20px;
-          border-radius: 10px;
-          text-align: center;
+            background: #444;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
         `;
         message.innerHTML = `
-          <h2>Congratulations!</h2>
-          <p>You've completed all stages!</p>
-          <p>Final Score: ${score}</p>
-          <button onclick="location.reload()" style="
-            margin-top: 15px;
-            padding: 10px 20px;
-            font-size: 16px;
-            border: none;
-            background: #FFD700;
-            color: #222;
-            cursor: pointer;
-            border-radius: 5px;
-          ">Play Again</button>
+            <h2>Congratulations!</h2>
+            <p>You've completed all stages!</p>
+            <p>Final Score: ${score}</p>
+            <p>High Score: ${highScore}</p>
+            <input type="text" id="playerNameComplete" placeholder="Enter your name" style="
+                margin: 10px 0;
+                padding: 8px;
+                width: 200px;
+                border-radius: 5px;
+                border: none;
+            ">
+            <button id="submitHighscoreBtnComplete" style="
+                margin: 10px 5px;
+                padding: 10px 20px;
+                font-size: 16px;
+                border: none;
+                background: #FFD700;
+                color: #222;
+                cursor: pointer;
+                border-radius: 5px;
+            ">Submit Score</button>
+            <button onclick="location.reload()" style="
+                margin: 10px 5px;
+                padding: 10px 20px;
+                font-size: 16px;
+                border: none;
+                background: #FFD700;
+                color: #222;
+                cursor: pointer;
+                border-radius: 5px;
+            ">Play Again</button>
         `;
         overlay.appendChild(message);
         document.body.appendChild(overlay);
+
+        // Add event listener for the submit button
+        const submitBtn = message.querySelector('#submitHighscoreBtnComplete');
+        submitBtn.addEventListener('click', () => {
+            const playerName = message.querySelector('#playerNameComplete').value.trim();
+            if (playerName === "") {
+                alert("Please enter your name.");
+                return;
+            }
+            submitHighScore(playerName, score)
+                .then(() => {
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = "Score Submitted!";
+                    openHighscoreOverlay();
+                })
+                .catch((error) => {
+                    console.error("Error submitting highscore:", error);
+                    alert("Error submitting score. Please try again.");
+                });
+        });
     }
 
     // Menu background animation
@@ -2061,7 +2120,7 @@
       streak = 0;
       multiplier = 1;
       patterns = stagePatterns[1];
-      remainingTime = stageConfigs[1].time;
+      remainingTime = 20; // Default time
       // Update UI
       updateUI();
       updateProgress();
