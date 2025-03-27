@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unlockable Level Editor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #222;
+            color: #fff;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .editor-container {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+        }
+
+        .stage-configs {
+            background: #333;
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .pattern-editor {
+            background: #333;
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, 80px);
+            grid-template-rows: repeat(3, 80px);
+            gap: 30px;
+            margin: 20px auto;
+        }
+
+        .circle {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(#8e8e8e, #444 40%, #444 3%, #282828);
+            box-shadow: inset 0 0 8px rgba(255,255,255,0.6);
+            cursor: pointer;
+            position: relative;
+        }
+
+        .circle.active {
+            background: linear-gradient(#F57F17, #FDD835 3%, #FDD835 40%, #FFF176);
+            transform: scale(1.1);
+        }
+
+        .circle::after {
+            content: "";
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #fff;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .pattern-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .pattern-item {
+            background: #444;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .pattern-item:hover {
+            background: #555;
+        }
+
+        .pattern-item.selected {
+            background: #666;
+            border: 2px solid #FFD700;
+        }
+
+        button {
+            background: #FFD700;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        button:hover {
+            background: #FFC107;
+        }
+
+        input[type="number"] {
+            width: 60px;
+            padding: 5px;
+            margin: 5px;
+        }
+
+        .stage-selector {
+            margin-bottom: 20px;
+        }
+
+        #patternPreview {
+            margin-top: 10px;
+            font-family: monospace;
+        }
+
+        .controls {
+            margin: 20px 0;
+            padding: 10px;
+            background: #444;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="editor-container">
+        <div class="stage-configs">
+            <h2>Stage Configurations</h2>
+            <div id="stageConfigsList"></div>
+            <button id="addStageBtn">Add Stage</button>
+        </div>
+
+        <div class="pattern-editor">
+            <h2>Pattern Editor</h2>
+            <div class="stage-selector">
+                <label>Select Stage: 
+                    <select id="stageSelect"></select>
+                </label>
+            </div>
+
+            <div class="controls">
+                <button id="startRecording">Start Recording</button>
+                <button id="stopRecording" disabled>Stop Recording</button>
+                <button id="clearPattern">Clear Pattern</button>
+                <div id="patternPreview">Current Pattern: []</div>
+            </div>
+
+            <div class="grid" id="patternGrid">
+                <div class="circle" data-index="1"></div>
+                <div class="circle" data-index="2"></div>
+                <div class="circle" data-index="3"></div>
+                <div class="circle" data-index="4"></div>
+                <div class="circle" data-index="5"></div>
+                <div class="circle" data-index="6"></div>
+                <div class="circle" data-index="7"></div>
+                <div class="circle" data-index="8"></div>
+                <div class="circle" data-index="9"></div>
+            </div>
+
+            <div class="controls">
+                <button id="addPattern">Add Pattern</button>
+                <button id="deleteSelected">Delete Selected</button>
+            </div>
+
+            <h3>Stage Patterns</h3>
+            <div id="patternList" class="pattern-list"></div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button id="downloadJson">Download levels.json</button>
+        <button id="loadJson">Load levels.json</button>
+        <input type="file" id="jsonFileInput" style="display: none" accept=".json">
+    </div>
+
+    <script>
+        let levelsData = {
+            stageConfigs: {},
+            stagePatterns: {}
+        };
+        let currentPattern = [];
+        let isRecording = false;
+        let selectedPatterns = new Set();
+
+        // Load initial data
+        fetch('levels.json')
+            .then(response => response.json())
+            .then(data => {
+                levelsData = data;
+                updateStageConfigs();
+                updateStageSelect();
+                updatePatternList();
+            })
+            .catch(error => console.error('Error loading levels.json:', error));
+
+        // Stage configuration handling
+        function updateStageConfigs() {
+            const container = document.getElementById('stageConfigsList');
+            container.innerHTML = '';
+
+            Object.entries(levelsData.stageConfigs).forEach(([stage, config]) => {
+                const div = document.createElement('div');
+                div.innerHTML = `
+                    <h3>Stage ${stage}</h3>
+                    <label>Time: <input type="number" value="${config.time}" 
+                        onchange="updateStageConfig(${stage}, 'time', this.value)"></label>
+                    <label>Required Patterns: <input type="number" value="${config.requiredPatterns}"
+                        onchange="updateStageConfig(${stage}, 'requiredPatterns', this.value)"></label>
+                    <button onclick="deleteStage(${stage})">Delete Stage</button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function updateStageConfig(stage, property, value) {
+            levelsData.stageConfigs[stage][property] = parseInt(value);
+        }
+
+        document.getElementById('addStageBtn').onclick = () => {
+            const nextStage = Object.keys(levelsData.stageConfigs).length + 1;
+            levelsData.stageConfigs[nextStage] = { time: 20, requiredPatterns: 10 };
+            levelsData.stagePatterns[nextStage] = [];
+            updateStageConfigs();
+            updateStageSelect();
+        };
+
+        function deleteStage(stage) {
+            delete levelsData.stageConfigs[stage];
+            delete levelsData.stagePatterns[stage];
+            updateStageConfigs();
+            updateStageSelect();
+        }
+
+        // Pattern recording
+        document.getElementById('startRecording').onclick = () => {
+            isRecording = true;
+            currentPattern = [];
+            document.getElementById('startRecording').disabled = true;
+            document.getElementById('stopRecording').disabled = false;
+            updatePatternPreview();
+        };
+
+        document.getElementById('stopRecording').onclick = () => {
+            isRecording = false;
+            document.getElementById('startRecording').disabled = false;
+            document.getElementById('stopRecording').disabled = true;
+        };
+
+        document.getElementById('clearPattern').onclick = () => {
+            currentPattern = [];
+            document.querySelectorAll('.circle').forEach(circle => {
+                circle.classList.remove('active');
+            });
+            updatePatternPreview();
+        };
+
+        // Pattern grid interaction
+        document.getElementById('patternGrid').addEventListener('click', (e) => {
+            if (!isRecording || !e.target.classList.contains('circle')) return;
+
+            const index = parseInt(e.target.dataset.index);
+            if (!currentPattern.includes(index)) {
+                currentPattern.push(index);
+                e.target.classList.add('active');
+                updatePatternPreview();
+            }
+        });
+
+        function updatePatternPreview() {
+            document.getElementById('patternPreview').textContent = 
+                `Current Pattern: [${currentPattern.join(',')}]`;
+        }
+
+        // Pattern management
+        document.getElementById('addPattern').onclick = () => {
+            if (currentPattern.length < 2) {
+                alert('Pattern must contain at least 2 points');
+                return;
+            }
+
+            const stage = document.getElementById('stageSelect').value;
+            if (!levelsData.stagePatterns[stage]) {
+                levelsData.stagePatterns[stage] = [];
+            }
+            levelsData.stagePatterns[stage].push([...currentPattern]);
+            updatePatternList();
+            document.getElementById('clearPattern').click();
+        };
+
+        document.getElementById('deleteSelected').onclick = () => {
+            const stage = document.getElementById('stageSelect').value;
+            levelsData.stagePatterns[stage] = levelsData.stagePatterns[stage].filter((_, index) => 
+                !selectedPatterns.has(index));
+            selectedPatterns.clear();
+            updatePatternList();
+        };
+
+        // Pattern list display
+        function updatePatternList() {
+            const stage = document.getElementById('stageSelect').value;
+            const container = document.getElementById('patternList');
+            container.innerHTML = '';
+
+            if (!levelsData.stagePatterns[stage]) return;
+
+            levelsData.stagePatterns[stage].forEach((pattern, index) => {
+                const div = document.createElement('div');
+                div.className = 'pattern-item' + 
+                    (selectedPatterns.has(index) ? ' selected' : '');
+                div.textContent = `[${pattern.join(',')}]`;
+                div.onclick = () => togglePatternSelection(index);
+                container.appendChild(div);
+            });
+        }
+
+        function togglePatternSelection(index) {
+            if (selectedPatterns.has(index)) {
+                selectedPatterns.delete(index);
+            } else {
+                selectedPatterns.add(index);
+            }
+            updatePatternList();
+        }
+
+        // Stage selection
+        function updateStageSelect() {
+            const select = document.getElementById('stageSelect');
+            select.innerHTML = '';
+            Object.keys(levelsData.stageConfigs).forEach(stage => {
+                const option = document.createElement('option');
+                option.value = stage;
+                option.textContent = `Stage ${stage}`;
+                select.appendChild(option);
+            });
+            updatePatternList();
+        }
+
+        document.getElementById('stageSelect').onchange = updatePatternList;
+
+        // JSON file handling
+        document.getElementById('downloadJson').onclick = () => {
+            const dataStr = JSON.stringify(levelsData, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'levels.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        };
+
+        document.getElementById('loadJson').onclick = () => {
+            document.getElementById('jsonFileInput').click();
+        };
+
+        document.getElementById('jsonFileInput').onchange = (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        levelsData = JSON.parse(e.target.result);
+                        updateStageConfigs();
+                        updateStageSelect();
+                        updatePatternList();
+                    } catch (error) {
+                        alert('Invalid JSON file');
+                    }
+                };
+                reader.readAsText(file);
+            }
+        };
+    </script>
+</body>
+</html> 
