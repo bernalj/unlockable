@@ -1841,11 +1841,38 @@
 
     // Show game complete overlay
     function showGameComplete() {
+        // Log completion of final stage
+        const completedStage = currentStage;
+        const currentStageData = timingData.stageData[completedStage];
+        if (currentStageData) {
+            currentStageData.endTime = Date.now();
+            currentStageData.finalRemainingTime = remainingTime;
+            currentStageData.completed = true;
+            
+            // Submit final stage data to Firebase using the same gameId format
+            submitTimingData(`${currentGameId}_stage_${completedStage}`, {
+                timestamp: Date.now(),
+                stage: completedStage,
+                stageData: currentStageData,
+                patterns: currentStageData.patterns,
+                partialScore: score
+            })
+            .then(() => {
+                console.log(`Stage ${completedStage} stats saved successfully`);
+            })
+            .catch((error) => {
+                console.error(`Error saving stage ${completedStage} stats:`, error);
+            });
+        }
+
         // Submit complete game data to Firebase
         submitTimingData(currentGameId, {
             ...timingData,
             gameComplete: true,
-            endReason: 'completed'
+            endReason: 'completed',
+            finalStage: completedStage,
+            finalScore: score,
+            totalGameTime: Date.now() - timingData.gameStartTime
         })
         .then(() => {
             console.log('Complete game stats saved successfully');
