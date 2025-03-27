@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unlockable - Statistics Dashboard</title>
+    <link rel="stylesheet" href="stats.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+</head>
+<body>
+    <!-- Header -->
+    <div class="dashboard-header">
+        <h1>Game Statistics</h1>
+        <div class="header-controls">
+            <select id="timeRange">
+                <option value="24h">Last 24 Hours</option>
+                <option value="7d">Last 7 Days</option>
+                <option value="30d">Last 30 Days</option>
+                <option value="all">All Time</option>
+            </select>
+            <button id="refreshData">
+                <span class="refresh-icon">↻</span> Refresh
+            </button>
+            <button id="exportData">Export Data</button>
+            <button id="compareGames">Compare Games</button>
+        </div>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="filter-section">
+        <form id="filterForm" class="filter-grid">
+            <div class="filter-group">
+                <label for="stageFilter">Stage:</label>
+                <select id="stageFilter">
+                    <option value="all">All Stages</option>
+                    <option value="1">Stage 1</option>
+                    <option value="2">Stage 2</option>
+                    <option value="3">Stage 3</option>
+                    <option value="4">Stage 4</option>
+                    <option value="5">Stage 5</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="lengthFilter">Pattern Length:</label>
+                <select id="lengthFilter">
+                    <option value="all">All Lengths</option>
+                    <option value="3">3 Nodes</option>
+                    <option value="4">4 Nodes</option>
+                    <option value="5">5 Nodes</option>
+                    <option value="6+">6+ Nodes</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="successRateThreshold">Min. Success Rate:</label>
+                <input type="range" id="successRateThreshold" min="0" max="100" value="0" step="5">
+                <span id="successRateValue">0%</span>
+            </div>
+        </form>
+    </div>
+
+    <!-- Overview Statistics -->
+    <div class="chart-container">
+        <div class="chart-header">
+            <h2>Overview</h2>
+            <div class="chart-toggle-container">
+                <label class="toggle-switch">
+                    <input type="checkbox" class="chart-toggle" data-chart-id="overviewStats" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+        </div>
+        <div id="overviewStats" class="overview-grid">
+            <div class="stat-card">
+                <h3>Total Games</h3>
+                <div id="totalGames">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Average Score</h3>
+                <div id="avgScore">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Success Rate</h3>
+                <div id="successRate">0%</div>
+            </div>
+            <div class="stat-card">
+                <h3>Avg. Duration</h3>
+                <div id="avgDuration">0s</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pattern Analysis Chart -->
+    <div class="chart-container">
+        <div class="chart-header">
+            <h2>Pattern Analysis</h2>
+            <div class="chart-toggle-container">
+                <label class="toggle-switch">
+                    <input type="checkbox" class="chart-toggle" data-chart-id="patternAnalysis" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+        </div>
+        <div class="chart-wrapper">
+            <canvas id="patternAnalysis"></canvas>
+        </div>
+    </div>
+
+    <!-- Stage Progression Chart -->
+    <div class="chart-container">
+        <div class="chart-header">
+            <h2>Stage Progression</h2>
+            <div class="chart-toggle-container">
+                <label class="toggle-switch">
+                    <input type="checkbox" class="chart-toggle" data-chart-id="stageProgression" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+        </div>
+        <canvas id="stageProgression"></canvas>
+    </div>
+
+    <!-- Time Distribution Chart -->
+    <div class="chart-container">
+        <div class="chart-header">
+            <h2>Time Distribution</h2>
+            <div class="chart-toggle-container">
+                <label class="toggle-switch">
+                    <input type="checkbox" class="chart-toggle" data-chart-id="timeDistribution" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+        </div>
+        <canvas id="timeDistribution"></canvas>
+    </div>
+
+    <!-- Recent Games -->
+    <div class="chart-container">
+        <h2>Recent Games</h2>
+        <div id="recentGames" class="recent-games"></div>
+    </div>
+
+    <!-- Game Details Modal -->
+    <div id="gameDetailsModal" class="modal">
+        <div class="modal-content">
+            <!-- Content will be dynamically populated -->
+        </div>
+    </div>
+
+    <!-- Game Comparison Modal -->
+    <div id="gameComparisonModal" class="modal">
+        <div class="modal-content">
+            <h2>Compare Games</h2>
+            <div class="game-selection-grid" id="gameSelectionGrid">
+                <!-- Games will be populated here -->
+            </div>
+            <div class="comparison-charts" id="comparisonCharts">
+                <!-- Charts will be added here -->
+            </div>
+            <button class="close-modal">Close</button>
+        </div>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div id="loadingSpinner" class="loading-spinner" style="display: none;"></div>
+
+    <script type="module" src="stats.js"></script>
+</body>
+</html> 

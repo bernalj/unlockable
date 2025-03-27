@@ -828,7 +828,7 @@
   </div>
   <script type="module">
     // Import Firebase helpers from external file.
-    import { submitHighScore, getTopHighScores } from './firebase-config.js';
+    import { submitHighScore, getTopHighScores, submitTimingData } from './firebase-config.js';
 
     // Global variables and game settings
     let score = 0;
@@ -855,6 +855,9 @@
       stageStartTime: 0,
       stageData: {}
     };
+
+    // Add after the timingData declaration
+    let currentGameId = null;
 
     // Calculate pattern complexity (more jumps and turns = more complex)
     function calculatePatternComplexity(pattern) {
@@ -909,28 +912,32 @@
       
       const patternData = {
         stage: currentStage,
-        pattern: currentTarget.slice(), // Clone the current pattern
+        pattern: [...currentTarget],
         length: currentTarget.length,
         complexity: calculatePatternComplexity(currentTarget),
         duration: duration,
         success: success,
         remainingTime: remainingTime,
+        score: score,
         timestamp: endTime
       };
       
+      // Add to overall patterns
       timingData.patterns.push(patternData);
       
-      // Initialize stage data if not exists
+      // Ensure stage data exists and update it
       if (!timingData.stageData[currentStage]) {
         timingData.stageData[currentStage] = {
           attempts: 0,
           successes: 0,
           totalTime: 0,
-          patterns: []
+          patterns: [],
+          timeLimit: stageConfigs[currentStage].time,
+          requiredPatterns: stageConfigs[currentStage].requiredPatterns,
+          startTime: Date.now()
         };
       }
       
-      // Update stage statistics
       const stageStats = timingData.stageData[currentStage];
       stageStats.attempts++;
       if (success) {
@@ -938,21 +945,6 @@
         stageStats.totalTime += duration;
       }
       stageStats.patterns.push(patternData);
-      
-      // Log pattern completion data
-      console.log(`Pattern Completion Data:`, {
-        stage: currentStage,
-        patternLength: currentTarget.length,
-        complexity: patternData.complexity.toFixed(2),
-        duration: duration.toFixed(2) + 'ms',
-        success: success,
-        remainingTime: remainingTime.toFixed(1) + 's'
-      });
-      
-      // Every 5 successful patterns, log stage statistics
-      if (success && stageStats.successes % 5 === 0) {
-        logStageStatistics(currentStage);
-      }
     }
 
     // Log detailed stage statistics
@@ -1460,7 +1452,39 @@
     function startTimer(reset = true) {
       if (reset) { 
         timerDuration = stageConfigs[currentStage].time;
-        remainingTime = timerDuration; 
+        remainingTime = timerDuration;
+        
+        // Only generate new gameId when currentGameId is null (new game)
+        if (!currentGameId) {
+          currentGameId = Date.now().toString();
+        }
+        
+        // Reset timing data for new game
+        if (!timingData || !timingData.gameStartTime) {
+          timingData = {
+            patterns: [],
+            stageData: {},
+            gameStartTime: Date.now(),
+            finalScore: 0,
+            finalStage: currentStage,
+            gameDuration: 0
+          };
+        }
+        
+        // Initialize data for the current stage
+        timingData.stageData[currentStage] = {
+          attempts: 0,
+          successes: 0,
+          totalTime: 0,
+          patterns: [],
+          timeLimit: stageConfigs[currentStage].time,
+          requiredPatterns: stageConfigs[currentStage].requiredPatterns,
+          startTime: Date.now()
+        };
+      } else {
+        // When resuming or starting a new stage, just update the timer duration
+        timerDuration = stageConfigs[currentStage].time;
+        remainingTime = timerDuration;
       }
       updateTimerDisplay();
       timerInterval = setInterval(() => {
@@ -1476,6 +1500,33 @@
     // Game Over: show game over overlay.
     function gameOver() {
       clearInterval(timerInterval);
+      
+      // Update final stage data
+      const finalStageData = timingData.stageData[currentStage];
+      if (finalStageData) {
+        finalStageData.endTime = Date.now();
+        finalStageData.finalRemainingTime = remainingTime;
+        finalStageData.completed = remainingTime > 0;
+      }
+      
+      // Add final game stats to timing data
+      timingData.finalScore = score;
+      timingData.finalStage = currentStage;
+      timingData.gameDuration = Date.now() - timingData.gameStartTime;
+      
+      // Submit final game data to Firebase
+      submitTimingData(currentGameId, {
+        ...timingData,
+        gameComplete: false,
+        endReason: remainingTime <= 0 ? 'timeout' : 'incomplete'
+      })
+      .then(() => {
+        console.log('Final game stats saved successfully');
+      })
+      .catch((error) => {
+        console.error('Error saving final game stats:', error);
+      });
+      
       document.getElementById("finalScore").textContent = "Score: " + score;
       let highScore = localStorage.getItem("highScore") || 0;
       if (score > highScore) { 
@@ -1680,17 +1731,18 @@
     });
     
     function restartGame() {
+      currentGameId = null; // Reset the game ID for a new game
       score = 0;
       currentStage = 1;
       progress = 0;
-      streak = 0; // Reset streak
-      multiplier = 1; // Reset multiplier
+      streak = 0;
+      multiplier = 1;
       patterns = stagePatterns[1];
       remainingTime = stageConfigs[1].time;
       updateTimerDisplay();
       updateUI();
       updateProgress();
-      updateMultiplierBar('x1'); // Reset multiplier bar
+      updateMultiplierBar('x1');
       document.getElementById('stageIndicator').textContent = `Stage ${currentStage}`;
       generateTarget();
       startTimer(true);
@@ -1721,15 +1773,29 @@
       progressBar.style.width = progress + '%';
       
       if (progress >= 100) {
+        // Log completion of current stage
+        logStageStatistics(currentStage);
+        
         if (currentStage < 10) {
           currentStage++;
           patterns = stagePatterns[currentStage];
           progress = 0;
           progressBar.style.width = '0%';
           stageIndicator.textContent = `Stage ${currentStage}`;
+          
+          // Initialize new stage data
+          timingData.stageData[currentStage] = {
+            attempts: 0,
+            successes: 0,
+            totalTime: 0,
+            patterns: [],
+            timeLimit: stageConfigs[currentStage].time,
+            requiredPatterns: stageConfigs[currentStage].requiredPatterns,
+            startTime: Date.now()
+          };
+          
           showStageComplete();
         } else {
-          // Game complete
           showGameComplete();
         }
       }
@@ -1737,94 +1803,142 @@
 
     // Show stage complete overlay
     function showStageComplete() {
-      logStageStatistics(currentStage);
-      console.log('\nStage Complete Analysis:', {
-        stage: currentStage,
-        finalRemainingTime: remainingTime.toFixed(1) + 's',
-        timeLimit: stageConfigs[currentStage].time + 's',
-        timePressure: (remainingTime / stageConfigs[currentStage].time).toFixed(2)
-      });
-      
-      clearInterval(timerInterval);
-      const overlay = document.createElement('div');
-      overlay.className = 'stage-complete-overlay';
-      
-      const content = document.createElement('div');
-      content.className = 'stage-complete-content';
-      
-      content.innerHTML = `
-        <h2>Stage ${currentStage - 1} Complete!</h2>
-        <p>Get ready for Stage ${currentStage}</p>
-        <p>Time limit: ${stageConfigs[currentStage].time}s</p>
-        <p>${currentStage > 5 ? "Complex patterns await..." : "New patterns await..."}</p>
-        <div class="stage-countdown">3</div>
-      `;
-      
-      overlay.appendChild(content);
-      document.body.appendChild(overlay);
-      
-      // Generate the first pattern of the new stage before showing the overlay
-      patterns = stagePatterns[currentStage];
-      currentTarget = patterns[Math.floor(Math.random() * patterns.length)];
-      updateTargetDisplay();
-      
-      // Countdown animation
-      let count = 3;
-      const countdownEl = content.querySelector('.stage-countdown');
-      
-      const countdownInterval = setInterval(() => {
-        count--;
-        if (count > 0) {
-          countdownEl.textContent = count;
-        } else {
-          clearInterval(countdownInterval);
-          document.body.removeChild(overlay);
-          remainingTime = stageConfigs[currentStage].time;
-          updateTimerDisplay();
-          startTimer(true);
+        // Log completion of current stage
+        const completedStage = currentStage - 1;
+        const currentStageData = timingData.stageData[completedStage];
+        if (currentStageData) {
+            currentStageData.endTime = Date.now();
+            currentStageData.finalRemainingTime = remainingTime;
+            currentStageData.completed = true;
+            
+            // Submit stage data to Firebase using the same gameId
+            submitTimingData(`${currentGameId}_stage_${completedStage}`, {
+                timestamp: Date.now(),
+                stage: completedStage,
+                stageData: currentStageData,
+                patterns: currentStageData.patterns, // Use stage-specific patterns
+                partialScore: score
+            })
+            .then(() => {
+                console.log(`Stage ${completedStage} stats saved successfully`);
+            })
+            .catch((error) => {
+                console.error(`Error saving stage ${completedStage} stats:`, error);
+            });
         }
-      }, 1000);
+        
+        // Initialize data for the new stage
+        timingData.stageData[currentStage] = {
+            attempts: 0,
+            successes: 0,
+            totalTime: 0,
+            patterns: [],
+            timeLimit: stageConfigs[currentStage].time,
+            requiredPatterns: stageConfigs[currentStage].requiredPatterns,
+            startTime: Date.now()
+        };
+        
+        logStageStatistics(currentStage);
+        console.log('\nStage Complete Analysis:', {
+          stage: currentStage,
+          finalRemainingTime: remainingTime.toFixed(1) + 's',
+          timeLimit: stageConfigs[currentStage].time + 's',
+          timePressure: (remainingTime / stageConfigs[currentStage].time).toFixed(2)
+        });
+        
+        clearInterval(timerInterval);
+        const overlay = document.createElement('div');
+        overlay.className = 'stage-complete-overlay';
+        
+        const content = document.createElement('div');
+        content.className = 'stage-complete-content';
+        
+        content.innerHTML = `
+          <h2>Stage ${currentStage - 1} Complete!</h2>
+          <p>Get ready for Stage ${currentStage}</p>
+          <p>Time limit: ${stageConfigs[currentStage].time}s</p>
+          <p>${currentStage > 5 ? "Complex patterns await..." : "New patterns await..."}</p>
+          <div class="stage-countdown">3</div>
+        `;
+        
+        overlay.appendChild(content);
+        document.body.appendChild(overlay);
+        
+        // Generate the first pattern of the new stage before showing the overlay
+        patterns = stagePatterns[currentStage];
+        currentTarget = patterns[Math.floor(Math.random() * patterns.length)];
+        updateTargetDisplay();
+        
+        // Countdown animation
+        let count = 3;
+        const countdownEl = content.querySelector('.stage-countdown');
+        
+        const countdownInterval = setInterval(() => {
+          count--;
+          if (count > 0) {
+            countdownEl.textContent = count;
+          } else {
+            clearInterval(countdownInterval);
+            document.body.removeChild(overlay);
+            remainingTime = stageConfigs[currentStage].time;
+            updateTimerDisplay();
+            startTimer(true);
+          }
+        }, 1000);
     }
 
     // Show game complete overlay
     function showGameComplete() {
-      const overlay = document.createElement('div');
-      overlay.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0,0,0,0.8);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 40;
-      `;
-      const message = document.createElement('div');
-      message.style.cssText = `
-        background: #444;
-        padding: 20px;
-        border-radius: 10px;
-        text-align: center;
-      `;
-      message.innerHTML = `
-        <h2>Congratulations!</h2>
-        <p>You've completed all stages!</p>
-        <p>Final Score: ${score}</p>
-        <button onclick="location.reload()" style="
-          margin-top: 15px;
-          padding: 10px 20px;
-          font-size: 16px;
-          border: none;
-          background: #FFD700;
-          color: #222;
-          cursor: pointer;
-          border-radius: 5px;
-        ">Play Again</button>
-      `;
-      overlay.appendChild(message);
-      document.body.appendChild(overlay);
+        // Submit complete game data to Firebase
+        submitTimingData(currentGameId, {
+            ...timingData,
+            gameComplete: true,
+            endReason: 'completed'
+        })
+        .then(() => {
+            console.log('Complete game stats saved successfully');
+        })
+        .catch((error) => {
+            console.error('Error saving complete game stats:', error);
+        });
+        
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0,0,0,0.8);
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          z-index: 40;
+        `;
+        const message = document.createElement('div');
+        message.style.cssText = `
+          background: #444;
+          padding: 20px;
+          border-radius: 10px;
+          text-align: center;
+        `;
+        message.innerHTML = `
+          <h2>Congratulations!</h2>
+          <p>You've completed all stages!</p>
+          <p>Final Score: ${score}</p>
+          <button onclick="location.reload()" style="
+            margin-top: 15px;
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            background: #FFD700;
+            color: #222;
+            cursor: pointer;
+            border-radius: 5px;
+          ">Play Again</button>
+        `;
+        overlay.appendChild(message);
+        document.body.appendChild(overlay);
     }
 
     // Menu background animation

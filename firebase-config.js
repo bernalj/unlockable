@@ -8,7 +8,9 @@ import {
   query, 
   orderByChild, 
   limitToLast, 
-  onValue 
+  onValue,
+  set,
+  get
 } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
 
 const firebaseConfig = {
@@ -45,4 +47,26 @@ function getTopHighScores(callback) {
   });
 }
 
-export { submitHighScore, getTopHighScores };
+function submitTimingData(gameId, timingData) {
+  const timingRef = ref(database, `gameStats/${gameId}`);
+  return set(timingRef, {
+    timestamp: Date.now(),
+    timingData: timingData
+  });
+}
+
+async function getGameStats() {
+  const statsRef = ref(database, "gameStats");
+  try {
+    const snapshot = await get(statsRef);
+    if (snapshot.exists()) {
+      return snapshot.val();
+    }
+    return null;
+  } catch (error) {
+    console.error("Error fetching game stats:", error);
+    return null;
+  }
+}
+
+export { submitHighScore, getTopHighScores, submitTimingData, getGameStats };
