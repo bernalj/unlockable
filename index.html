@@ -422,7 +422,7 @@
     /* Progress bar styling */
     .progress-container {
       position: fixed;
-      top: 170px;
+      top: 200px;
       left: 50%;
       transform: translateX(-50%);
       width: 200px;
@@ -440,7 +440,7 @@
     }
     .stage-indicator {
       position: fixed;
-      top: 185px;
+      top: 215px;
       left: 50%;
       transform: translateX(-50%);
       font-size: 14px;
@@ -859,6 +859,11 @@
     // Add after the timingData declaration
     let currentGameId = null;
 
+    // Add this with the other global variables at the top
+    let stageConfigs = {};
+    let patterns = [];
+    let levelData = null; // Store the entire loaded JSON data
+
     // Calculate pattern complexity (more jumps and turns = more complex)
     function calculatePatternComplexity(pattern) {
       let complexity = 0;
@@ -947,15 +952,11 @@
       stageStats.patterns.push(patternData);
     }
 
-    // Replace the stageConfigs and stagePatterns declarations with:
-    let stageConfigs = {};
-    let patterns = [];
-
     // Load game levels from JSON file
     async function loadLevels() {
         try {
             const response = await fetch('levels.json', {
-                cache: 'no-store', // Prevents browser caching
+                cache: 'no-store',
                 headers: {
                     'Cache-Control': 'no-cache',
                     'Pragma': 'no-cache'
@@ -977,6 +978,8 @@
                 throw new Error('Missing stage 1 configuration');
             }
 
+            // Store the entire data object
+            levelData = data;
             stageConfigs = data.stageConfigs;
             patterns = data.stagePatterns[1]; // Set initial stage patterns
 
@@ -1418,9 +1421,9 @@
         // Show countdown overlay for numbers 5 through 1
         if (remainingTime > 0 && remainingTime <= 5) {
             showCountdown(Math.ceil(remainingTime));
-        } else {
-            document.getElementById("countdownOverlay").style.display = "none";
-        }
+      } else {
+        document.getElementById("countdownOverlay").style.display = "none";
+      }
     }
     
     // Animate the +0.5 timer increment.
@@ -1507,112 +1510,112 @@
     
     // Handle mouse/touch input start
     function handleStart(e) {
-        e.preventDefault();
-        isDrawing = true;
-        currentPointer = null;
-        let target = e.target;
-        if (target.classList.contains("circle")) {
-            const index = parseInt(target.getAttribute("data-index"));
-            if (!drawnPattern.includes(index)) {
-                drawnPattern.push(index);
-                target.classList.add("active");
-                if (soundEnabled) {
-                    playSound("tap");
-                }
-            }
+      e.preventDefault();
+      isDrawing = true;
+      currentPointer = null;
+      let target = e.target;
+      if (target.classList.contains("circle")) {
+        const index = parseInt(target.getAttribute("data-index"));
+        if (!drawnPattern.includes(index)) {
+          drawnPattern.push(index);
+          target.classList.add("active");
+          if (soundEnabled) {
+            playSound("tap");
+          }
         }
+      }
     }
-
+    
     // Handle mouse/touch movement during pattern drawing
     function handleMove(e) {
-        if (!isDrawing) return;
-        let clientX, clientY;
-        if (e.touches) {
-            clientX = e.touches[0].clientX;
-            clientY = e.touches[0].clientY;
-        } else {
-            clientX = e.clientX;
-            clientY = e.clientY;
-        }
-        
-        const gameArea = document.getElementById("gameArea");
-        const gameAreaRect = gameArea.getBoundingClientRect();
-        currentPointer = {
-            x: clientX - gameAreaRect.left,
-            y: clientY - gameAreaRect.top
-        };
-        
-        const circles = document.querySelectorAll('#gameArea .circle');
-        for (let i = 0; i < circles.length; i++) {
-            let circle = circles[i];
-            let index = parseInt(circle.getAttribute("data-index"));
-            if (drawnPattern.includes(index)) continue;
-            const rect = circle.getBoundingClientRect();
+      if (!isDrawing) return;
+      let clientX, clientY;
+      if (e.touches) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+      } else {
+        clientX = e.clientX;
+        clientY = e.clientY;
+      }
+      
+      const gameArea = document.getElementById("gameArea");
+      const gameAreaRect = gameArea.getBoundingClientRect();
+      currentPointer = {
+        x: clientX - gameAreaRect.left,
+        y: clientY - gameAreaRect.top
+      };
+      
+      const circles = document.querySelectorAll('#gameArea .circle');
+      for (let i = 0; i < circles.length; i++) {
+        let circle = circles[i];
+        let index = parseInt(circle.getAttribute("data-index"));
+        if (drawnPattern.includes(index)) continue;
+        const rect = circle.getBoundingClientRect();
             
             // Initial circle activation using bounding box
-            if (drawnPattern.length === 0) {
-                if (clientX >= rect.left && clientX <= rect.right &&
-                    clientY >= rect.top && clientY <= rect.bottom) {
-                    drawnPattern.push(index);
-                    circle.classList.add("active");
-                    if (soundEnabled) {
-                        playSound("tap");
-                    }
-                }
-            } else {
+        if (drawnPattern.length === 0) {
+          if (clientX >= rect.left && clientX <= rect.right &&
+              clientY >= rect.top && clientY <= rect.bottom) {
+            drawnPattern.push(index);
+            circle.classList.add("active");
+            if (soundEnabled) {
+              playSound("tap");
+            }
+          }
+        } else {
                 // Distance-based circle activation
-                const centerX = rect.left + rect.width / 2;
-                const centerY = rect.top + rect.height / 2;
-                const dx = clientX - centerX;
-                const dy = clientY - centerY;
-                const distance = Math.sqrt(dx * dx + dy * dy);
+          const centerX = rect.left + rect.width / 2;
+          const centerY = rect.top + rect.height / 2;
+          const dx = clientX - centerX;
+          const dy = clientY - centerY;
+          const distance = Math.sqrt(dx * dx + dy * dy);
                 
                 let nextTarget = currentTarget[drawnPattern.length];
                 let dynamicHitPercentage = (index === nextTarget) ? ACTIVE_HIT_PERCENTAGE : INACTIVE_HIT_PERCENTAGE;
                 let threshold = CIRCLE_RADIUS * dynamicHitPercentage;
                 
-                if (distance <= threshold) {
-                    let last = drawnPattern[drawnPattern.length - 1];
+          if (distance <= threshold) {
+            let last = drawnPattern[drawnPattern.length - 1];
                     
                     // Check and activate intermediate circle if present
-                    let intermediate = getIntermediate(last, index);
-                    if (intermediate && !drawnPattern.includes(intermediate)) {
+            let intermediate = getIntermediate(last, index);
+            if (intermediate && !drawnPattern.includes(intermediate)) {
                         const intermediateCircle = document.querySelector(`#gameArea .grid .circle[data-index="${intermediate}"]`);
                         if (intermediateCircle) {
-                            drawnPattern.push(intermediate);
+              drawnPattern.push(intermediate);
                             requestAnimationFrame(() => {
                                 intermediateCircle.classList.add("active");
-                                if (soundEnabled) {
+                if (soundEnabled) {
                                     playSound("tap");
-                                }
+                }
                             });
                             drawLines();
-                        }
-                    }
+              }
+            }
                     
                     // Activate target circle
-                    drawnPattern.push(index);
-                    circle.classList.add("active");
-                    if (soundEnabled) {
-                        playSound("tap");
-                    }
+            drawnPattern.push(index);
+            circle.classList.add("active");
+            if (soundEnabled) {
+              playSound("tap");
+            }
                     drawLines();
                     break;
-                }
-            }
+          }
         }
-        drawLines();
+      }
+      drawLines();
     }
-
+    
     // Handle mouse/touch input end
     function handleEnd(e) {
-        if (!isDrawing) return;
-        isDrawing = false;
-        currentPointer = null;
-        drawLines();
-        if (drawnPattern.length > 0) {
-            completePattern();
-        }
+      if (!isDrawing) return;
+      isDrawing = false;
+      currentPointer = null;
+      drawLines();
+      if (drawnPattern.length > 0) {
+        completePattern();
+      }
     }
     
     gameArea.addEventListener("mousedown", handleStart);
@@ -1716,19 +1719,19 @@
     });
     
     function restartGame() {
-      currentGameId = null; // Reset the game ID for a new game
+      currentGameId = null;
       score = 0;
       currentStage = 1;
       progress = 0;
       streak = 0;
       multiplier = 1;
-      patterns = stagePatterns[1] || [[1,2,3], [3,2,1]]; // Use fallback only if needed
-      remainingTime = stageConfigs[1]?.time || 20; // Use fallback time if needed
+      patterns = levelData.stagePatterns[1] || [[1,2,3], [3,2,1]];
+      remainingTime = stageConfigs[1]?.time || 20;
       updateTimerDisplay();
       updateUI();
       updateProgress();
       updateMultiplierBar('x1');
-      document.getElementById('stageIndicator').textContent = `Stage ${currentStage}`;
+      document.getElementById('stageIndicator').textContent = 'Stage 1';
       generateTarget();
       startTimer(true);
     }
@@ -1750,7 +1753,7 @@
         document.getElementById("highscoreOverlay").style.display = "flex";
       });
     }
-    
+
     // Show stage complete overlay
     function showStageComplete() {
         // Log completion of current stage
@@ -1766,7 +1769,7 @@
                 timestamp: Date.now(),
                 stage: completedStage,
                 stageData: currentStageData,
-                patterns: currentStageData.patterns, // Use stage-specific patterns
+                patterns: currentStageData.patterns,
                 partialScore: score
             })
             .then(() => {
@@ -1787,53 +1790,53 @@
             requiredPatterns: stageConfigs[currentStage].requiredPatterns,
             startTime: Date.now()
         };
-        
-        clearInterval(timerInterval);
-        const overlay = document.createElement('div');
-        overlay.className = 'stage-complete-overlay';
-        
-        const content = document.createElement('div');
-        content.className = 'stage-complete-content';
-        
-        content.innerHTML = `
-          <h2>Stage ${currentStage - 1} Complete!</h2>
-          <p>Get ready for Stage ${currentStage}</p>
-          <p>Time limit: ${stageConfigs[currentStage].time}s</p>
-          <p>${currentStage > 5 ? "Complex patterns await..." : "New patterns await..."}</p>
-          <div class="stage-countdown">3</div>
-        `;
-        
-        overlay.appendChild(content);
-        document.body.appendChild(overlay);
-        
-        // Generate the first pattern of the new stage before showing the overlay
-        if (stagePatterns[currentStage]) {
-            patterns = stagePatterns[currentStage];
+      
+      clearInterval(timerInterval);
+      const overlay = document.createElement('div');
+      overlay.className = 'stage-complete-overlay';
+      
+      const content = document.createElement('div');
+      content.className = 'stage-complete-content';
+      
+      content.innerHTML = `
+        <h2>Stage ${currentStage - 1} Complete!</h2>
+        <p>Get ready for Stage ${currentStage}</p>
+        <p>Time limit: ${stageConfigs[currentStage].time}s</p>
+        <p>${currentStage > 5 ? "Complex patterns await..." : "New patterns await..."}</p>
+        <div class="stage-countdown">3</div>
+      `;
+      
+      overlay.appendChild(content);
+      document.body.appendChild(overlay);
+      
+      // Load patterns for the new stage from the loaded JSON data
+      const nextStagePatterns = levelData.stagePatterns[currentStage];
+      if (nextStagePatterns) {
+          patterns = nextStagePatterns;
+      currentTarget = patterns[Math.floor(Math.random() * patterns.length)];
+      updateTargetDisplay();
+      } else {
+          console.error(`Missing patterns for stage ${currentStage}`);
+          showGameComplete();
+          return;
+      }
+      
+      // Countdown animation
+      let count = 3;
+      const countdownEl = content.querySelector('.stage-countdown');
+      
+      const countdownInterval = setInterval(() => {
+        count--;
+        if (count > 0) {
+          countdownEl.textContent = count;
         } else {
-            console.error(`Missing patterns for stage ${currentStage}`);
-            showGameComplete(); // End game if we don't have patterns for next stage
-            return;
+          clearInterval(countdownInterval);
+          document.body.removeChild(overlay);
+          remainingTime = stageConfigs[currentStage].time;
+          updateTimerDisplay();
+          startTimer(true);
         }
-        
-        currentTarget = patterns[Math.floor(Math.random() * patterns.length)];
-        updateTargetDisplay();
-        
-        // Countdown animation
-        let count = 3;
-        const countdownEl = content.querySelector('.stage-countdown');
-        
-        const countdownInterval = setInterval(() => {
-          count--;
-          if (count > 0) {
-            countdownEl.textContent = count;
-          } else {
-            clearInterval(countdownInterval);
-            document.body.removeChild(overlay);
-            remainingTime = stageConfigs[currentStage].time;
-            updateTimerDisplay();
-            startTimer(true);
-          }
-        }, 1000);
+      }, 1000);
     }
 
     // Show game complete overlay
@@ -1858,30 +1861,30 @@
             highScore = score;
         }
         
-        const overlay = document.createElement('div');
-        overlay.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.8);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 40;
-        `;
-        const message = document.createElement('div');
-        message.style.cssText = `
-            background: #444;
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-        `;
-        message.innerHTML = `
-            <h2>Congratulations!</h2>
-            <p>You've completed all stages!</p>
-            <p>Final Score: ${score}</p>
+      const overlay = document.createElement('div');
+      overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.8);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 40;
+      `;
+      const message = document.createElement('div');
+      message.style.cssText = `
+        background: #444;
+        padding: 20px;
+        border-radius: 10px;
+        text-align: center;
+      `;
+      message.innerHTML = `
+        <h2>Congratulations!</h2>
+        <p>You've completed all stages!</p>
+        <p>Final Score: ${score}</p>
             <p>High Score: ${highScore}</p>
             <input type="text" id="playerNameComplete" placeholder="Enter your name" style="
                 margin: 10px 0;
@@ -1900,19 +1903,19 @@
                 cursor: pointer;
                 border-radius: 5px;
             ">Submit Score</button>
-            <button onclick="location.reload()" style="
+        <button onclick="location.reload()" style="
                 margin: 10px 5px;
-                padding: 10px 20px;
-                font-size: 16px;
-                border: none;
-                background: #FFD700;
-                color: #222;
-                cursor: pointer;
-                border-radius: 5px;
-            ">Play Again</button>
-        `;
-        overlay.appendChild(message);
-        document.body.appendChild(overlay);
+          padding: 10px 20px;
+          font-size: 16px;
+          border: none;
+          background: #FFD700;
+          color: #222;
+          cursor: pointer;
+          border-radius: 5px;
+        ">Play Again</button>
+      `;
+      overlay.appendChild(message);
+      document.body.appendChild(overlay);
 
         // Add event listener for the submit button
         const submitBtn = message.querySelector('#submitHighscoreBtnComplete');
@@ -1937,117 +1940,117 @@
 
     // Menu background animation patterns
     const menuPatterns = [
-        [1, 5, 9],
-        [3, 6, 9, 5, 1],
-        [2, 4, 8, 6],
-        [1, 8, 3, 4]
+      [1, 5, 9],
+      [3, 6, 9, 5, 1],
+      [2, 4, 8, 6],
+      [1, 8, 3, 4]
     ];
 
     // Menu animation state variables
     let currentMenuPattern = 0;
     let menuAnimationInterval = null;
     let menuDrawnPattern = [];
-
+    
     // Initialize and manage menu canvas
     const menuCanvas = document.getElementById("menuLineCanvas");
     const menuCtx = menuCanvas.getContext("2d");
-
+    
     // Resize menu canvas to match background dimensions
     function resizeMenuCanvas() {
-        const menuBackground = document.getElementById("menuBackground");
-        menuCanvas.width = menuBackground.offsetWidth;
-        menuCanvas.height = menuBackground.offsetHeight;
+      const menuBackground = document.getElementById("menuBackground");
+      menuCanvas.width = menuBackground.offsetWidth;
+      menuCanvas.height = menuBackground.offsetHeight;
         drawMenuLines();
     }
-
+    
     // Clear menu canvas content
     function clearMenuCanvas() {
-        menuCtx.clearRect(0, 0, menuCanvas.width, menuCanvas.height);
+      menuCtx.clearRect(0, 0, menuCanvas.width, menuCanvas.height);
     }
-
+    
     // Calculate center position of menu circle
     function getMenuCircleCenter(index) {
-        const circle = document.querySelector(`#menuBackgroundGrid .circle[data-index="${index}"]`);
-        const rect = circle.getBoundingClientRect();
-        const canvasRect = menuCanvas.getBoundingClientRect();
-        return {
-            x: rect.left + rect.width / 2 - canvasRect.left,
-            y: rect.top + rect.height / 2 - canvasRect.top
-        };
+      const circle = document.querySelector(`#menuBackgroundGrid .circle[data-index="${index}"]`);
+      const rect = circle.getBoundingClientRect();
+      const canvasRect = menuCanvas.getBoundingClientRect();
+      return {
+        x: rect.left + rect.width / 2 - canvasRect.left,
+        y: rect.top + rect.height / 2 - canvasRect.top
+      };
     }
-
+    
     // Draw connecting lines in menu background
     function drawMenuLines() {
-        clearMenuCanvas();
-        if (menuDrawnPattern.length === 0) return;
-        
-        menuCtx.lineWidth = 5;
-        menuCtx.strokeStyle = "rgba(255, 215, 0, 0.5)";
-        menuCtx.beginPath();
-        
-        for (let i = 0; i < menuDrawnPattern.length; i++) {
-            const center = getMenuCircleCenter(menuDrawnPattern[i]);
-            if (i === 0) {
-                menuCtx.moveTo(center.x, center.y);
-            } else {
-                menuCtx.lineTo(center.x, center.y);
-            }
+      clearMenuCanvas();
+      if (menuDrawnPattern.length === 0) return;
+      
+      menuCtx.lineWidth = 5;
+      menuCtx.strokeStyle = "rgba(255, 215, 0, 0.5)";
+      menuCtx.beginPath();
+      
+      for (let i = 0; i < menuDrawnPattern.length; i++) {
+        const center = getMenuCircleCenter(menuDrawnPattern[i]);
+        if (i === 0) {
+          menuCtx.moveTo(center.x, center.y);
+        } else {
+          menuCtx.lineTo(center.x, center.y);
         }
-        menuCtx.stroke();
+      }
+      menuCtx.stroke();
     }
 
     // Reset menu pattern state
     function resetMenuPattern() {
-        menuDrawnPattern = [];
-        document.querySelectorAll('#menuBackgroundGrid .circle').forEach(circle => {
-            circle.classList.remove('active');
-        });
-        clearMenuCanvas();
+      menuDrawnPattern = [];
+      document.querySelectorAll('#menuBackgroundGrid .circle').forEach(circle => {
+        circle.classList.remove('active');
+      });
+      clearMenuCanvas();
     }
-
+    
     // Animate menu background pattern
     function animateMenuPattern() {
-        const pattern = menuPatterns[currentMenuPattern];
-        let step = 0;
-        
-        function drawNextPoint() {
-            if (step < pattern.length) {
-                const index = pattern[step];
-                menuDrawnPattern.push(index);
-                const circle = document.querySelector(`#menuBackgroundGrid .circle[data-index="${index}"]`);
-                circle.classList.add('active');
-                drawMenuLines();
-                step++;
-                setTimeout(drawNextPoint, 300);
-            } else {
-                setTimeout(() => {
-                    resetMenuPattern();
-                    currentMenuPattern = (currentMenuPattern + 1) % menuPatterns.length;
-                    setTimeout(() => {
-                        animateMenuPattern();
-                    }, 700);
-                }, 1000);
-            }
+      const pattern = menuPatterns[currentMenuPattern];
+      let step = 0;
+      
+      function drawNextPoint() {
+        if (step < pattern.length) {
+          const index = pattern[step];
+          menuDrawnPattern.push(index);
+          const circle = document.querySelector(`#menuBackgroundGrid .circle[data-index="${index}"]`);
+          circle.classList.add('active');
+          drawMenuLines();
+          step++;
+          setTimeout(drawNextPoint, 300);
+        } else {
+          setTimeout(() => {
+            resetMenuPattern();
+            currentMenuPattern = (currentMenuPattern + 1) % menuPatterns.length;
+            setTimeout(() => {
+              animateMenuPattern();
+            }, 700);
+          }, 1000);
         }
-        
-        drawNextPoint();
+      }
+      
+      drawNextPoint();
     }
 
     // Start menu background animation
     function startMenuAnimation() {
-        resetMenuPattern();
-        animateMenuPattern();
+      resetMenuPattern();
+      animateMenuPattern();
     }
 
     // Stop menu background animation
     function stopMenuAnimation() {
-        resetMenuPattern();
-        if (menuAnimationInterval) {
-            clearInterval(menuAnimationInterval);
-            menuAnimationInterval = null;
-        }
+      resetMenuPattern();
+      if (menuAnimationInterval) {
+        clearInterval(menuAnimationInterval);
+        menuAnimationInterval = null;
+      }
     }
-    
+
     // Menu navigation
     document.getElementById("mainMenuBtn").addEventListener("click", () => {
       // Stop the game
@@ -2060,7 +2063,7 @@
       progress = 0;
       streak = 0;
       multiplier = 1;
-      patterns = stagePatterns[1];
+      patterns = levelData.stagePatterns[1];
       remainingTime = 20; // Default time
       // Update UI
       updateUI();
