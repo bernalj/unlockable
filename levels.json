@@ -1,15 +1,15 @@
 {
   "stageConfigs": {
-    "1": { "time": 18, "requiredPatterns": 10 },
-    "2": { "time": 18, "requiredPatterns": 10 },
-    "3": { "time": 22, "requiredPatterns": 10 },
-    "4": { "time": 30, "requiredPatterns": 10 },
-    "5": { "time": 38, "requiredPatterns": 10 },
-    "6": { "time": 42, "requiredPatterns": 10 },
-    "7": { "time": 60, "requiredPatterns": 10 },
-    "8": { "time": 65, "requiredPatterns": 10 },
-    "9": { "time": 70, "requiredPatterns": 10 },
-    "10": { "time": 80, "requiredPatterns": 10 }
+    "1": { "time": 16, "requiredPatterns": 10 },
+    "2": { "time": 17, "requiredPatterns": 10 },
+    "3": { "time": 19, "requiredPatterns": 10 },
+    "4": { "time": 21, "requiredPatterns": 10 },
+    "5": { "time": 21, "requiredPatterns": 10 },
+    "6": { "time": 22, "requiredPatterns": 10 },
+    "7": { "time": 25, "requiredPatterns": 10 },
+    "8": { "time": 29, "requiredPatterns": 10 },
+    "9": { "time": 33, "requiredPatterns": 10 },
+    "10": { "time": 45, "requiredPatterns": 10 }
   },
   "stagePatterns": {
     "1": [[1,2,3], [3,2,1], [4,5,6], [6,5,4], [7,8,9], [9,8,7], [1,4,7], [7,4,1], [2,5,8], [8,5,2], [3,6,9], [9,6,3], [1,5,9], [9,5,1], [3,5,7], [7,5,3]],
