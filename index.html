@@ -1017,25 +1017,6 @@
         }
     }
     
-    // Play button event handler
-    document.getElementById("playBtn").addEventListener("click", async () => {
-        stopMenuAnimation();
-        
-        // Initialize game with level data
-        const levelsLoaded = await loadLevels();
-        if (!levelsLoaded) {
-            document.getElementById("mainMenu").style.display = "flex";
-            startMenuAnimation();
-            return;
-        }
-        
-        document.getElementById("mainMenu").style.display = "none";
-        preloadSounds();
-        updateMultiplierBarWidth();
-        generateTarget();
-        startTimer(true);
-    });
-
     // Updates progress bar and handles stage transitions
     function updateProgress() {
         const progressBar = document.getElementById('progressBar');
@@ -1136,7 +1117,7 @@ const soundPoolIndexes = {
     // Preload sounds with very low volume to handle mobile autoplay restrictions
     function preloadSounds() {
       Object.values(soundPools).flat().forEach(audio => {
-        audio.volume = 0.01;
+        audio.volume = 0.001;
         audio.play().then(() => {
           audio.pause();
           audio.currentTime = 0;

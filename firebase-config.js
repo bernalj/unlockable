@@ -36,7 +36,7 @@ function submitHighScore(name, score) {
 function getTopHighScores(callback) {
   // Query for top 5 high scores (Firebase returns in ascending order, so we'll reverse)
   const highscoreRef = ref(database, "highscores");
-  const highscoreQuery = query(highscoreRef, orderByChild("score"), limitToLast(5));
+  const highscoreQuery = query(highscoreRef, orderByChild("score"), limitToLast(10));
   onValue(highscoreQuery, (snapshot) => {
     let highscores = [];
     snapshot.forEach((childSnapshot) => {
